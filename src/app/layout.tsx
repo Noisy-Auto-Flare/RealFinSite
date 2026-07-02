@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { initializeApp } from "@/lib/init";
 import ClientSessionProvider from "@/components/ClientSessionProvider";
+import ToastProvider from "@/components/Toast";
 
 initializeApp();
 
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="ru">
       <body className="min-h-screen">
         <ClientSessionProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ClientSessionProvider>
       </body>
     </html>
