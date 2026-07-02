@@ -5,6 +5,13 @@ import Link from "next/link";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
 
+interface CredentialInfo {
+  id: number;
+  accountId: number;
+  exchange: string;
+  lastSyncAt: string | null;
+}
+
 interface Account {
   id: number;
   name: string;
@@ -14,6 +21,7 @@ interface Account {
   isAutoSync: number;
   balances: { currency: string; amount: number }[];
   addresses: { network: string; address: string }[];
+  credentials: CredentialInfo | null;
 }
 
 export default function AccountsPage() {
@@ -47,12 +55,12 @@ export default function AccountsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {accounts.map((acc) => {
+            {accounts.map((acc) => {
             const icon = ACCOUNT_TYPE_ICONS[acc.type] || "💳";
             const label = ACCOUNT_TYPE_LABELS[acc.type] || acc.type;
 
             return (
-              <div key={acc.id} className="card hover:border-[var(--accent)] transition-colors">
+              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block card hover:border-[var(--accent)] transition-colors">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="flex items-center gap-2">
@@ -84,14 +92,16 @@ export default function AccountsPage() {
                   </div>
 
                   <div className="flex items-center gap-2 text-xs">
-                    {acc.isAutoSync ? (
-                      <span className="badge badge-confirmed">Авто-скан</span>
+                    {acc.credentials ? (
+                      <span className="badge badge-confirmed">{acc.credentials.exchange.toUpperCase()}</span>
+                    ) : acc.isAutoSync ? (
+                      <span className="badge badge-confirmed">Авто</span>
                     ) : (
                       <span className="badge badge-pending">Ручной</span>
                     )}
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

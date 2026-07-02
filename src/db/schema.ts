@@ -94,4 +94,5 @@ export const apiCredentials = sqliteTable("api_credentials", {
   exchange: text("exchange").notNull(), // bybit
   apiKey: text("api_key").notNull(),
   apiSecret: text("api_secret").notNull(),
+  lastSyncAt: text("last_sync_at"),
 });

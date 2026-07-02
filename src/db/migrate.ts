@@ -58,4 +58,8 @@ createIndex("account_currency_unique", "balances", "account_id, currency", true)
 console.log("\n[exchange_rates]");
 createIndex("pair_unique", "exchange_rates", "base_currency, quote_currency", true);
 
+// === api_credentials ===
+console.log("\n[api_credentials]");
+addColumn("api_credentials", "last_sync_at", "TEXT");
+
 console.log("\nMigrations complete.");
