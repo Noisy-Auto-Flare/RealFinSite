@@ -11,11 +11,11 @@ export default async function DashboardLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="flex min-h-screen">
+    <>
       <Navbar role={session.user.role} username={session.user.username} />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="pt-14 pb-20 p-6">
         {children}
       </main>
-    </div>
+    </>
   );
 }

@@ -315,7 +315,7 @@ button {
 }
 
 .fab.pulse {
-  animation: pulse-glow 2s ease-in-out infinite;
+  animation: pulse-glow 2s ease-in-out 3;
 }
 
 .fab.active {
@@ -397,7 +397,7 @@ button {
 /* ---- Responsive helpers ---- */
 @media (max-width: 768px) {
   main {
-    padding: 1rem !important;
+    padding: calc(56px + 1rem) 1rem 1rem !important;
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)) !important;
   }
 
