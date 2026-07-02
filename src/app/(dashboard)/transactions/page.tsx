@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Select from "@/components/Select";
 import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
 
 interface Transaction {
   id: number;
@@ -35,6 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function TransactionsPage() {
+  const toast = useToast();
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -121,19 +123,29 @@ export default function TransactionsPage() {
   async function saveEdit() {
     if (!editTx) return;
     setSaving(true);
-    await fetch(`/api/transactions/${editTx.id}`, {
+    const res = await fetch(`/api/transactions/${editTx.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ category: editCategory, description: editDescription }),
     });
     setSaving(false);
     setEditTx(null);
+    if (res.ok) {
+      toast.success("Операция обновлена");
+    } else {
+      toast.error("Ошибка обновления");
+    }
     loadTxs();
   }
 
   async function deleteTx(id: number) {
     if (!confirm("Удалить эту операцию?")) return;
-    await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Операция удалена");
+    } else {
+      toast.error("Ошибка удаления");
+    }
     loadTxs();
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import { useToast } from "@/components/Toast";
 
 interface TxMini {
   id: number;
@@ -32,9 +33,9 @@ const MATCH_LABELS: Record<string, string> = {
 };
 
 export default function MatchesPage() {
+  const toast = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionMsg, setActionMsg] = useState("");
 
   useEffect(() => { loadMatches(); }, []);
 
@@ -46,7 +47,6 @@ export default function MatchesPage() {
   }
 
   async function handleAction(matchId: number, action: "confirm" | "reject") {
-    setActionMsg("");
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,12 +55,10 @@ export default function MatchesPage() {
 
     if (res.ok) {
       setMatches(matches.filter((m) => m.id !== matchId));
-      setActionMsg(action === "confirm" ? "✅ Связь подтверждена" : "❌ Связь отклонена");
+      toast.success(action === "confirm" ? "Связь подтверждена" : "Связь отклонена");
     } else {
-      setActionMsg("Ошибка");
+      toast.error("Ошибка");
     }
-
-    setTimeout(() => setActionMsg(""), 3000);
   }
 
   function addrDisplay(addr: string | null) {
@@ -76,10 +74,6 @@ export default function MatchesPage() {
           🔄 Обновить
         </button>
       </div>
-
-      {actionMsg && (
-        <div className="card border-green-500/30 text-sm">{actionMsg}</div>
-      )}
 
       {loading ? (
         <p className="text-[var(--text-muted)]">Загрузка...</p>

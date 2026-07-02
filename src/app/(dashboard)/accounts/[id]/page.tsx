@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS, formatAmount } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
 import Select from "@/components/Select";
+import { useToast } from "@/components/Toast";
 
 interface Balance {
   currency: string;
@@ -35,6 +36,7 @@ interface Credential {
 }
 
 export default function AccountDetailPage() {
+  const toast = useToast();
   const params = useParams();
   const accountId = Number(params.id);
 
@@ -76,6 +78,7 @@ export default function AccountDetailPage() {
     setApiKey("");
     setApiSecret("");
     setSaving(false);
+    toast.success("Ключи сохранены");
   }
 
   async function deleteCredentials() {
@@ -88,6 +91,7 @@ export default function AccountDetailPage() {
     });
     if (!res.ok) { const d = await res.json(); setError(d.error); return; }
     setCredential(null);
+    toast.success("Ключи удалены");
   }
 
   async function startSync() {
@@ -100,8 +104,8 @@ export default function AccountDetailPage() {
       body: JSON.stringify({ accountId }),
     });
     const data = await res.json();
-    if (!res.ok) { setError(data.error); setSyncing(false); return; }
-    setSyncResult(`Синхронизировано: ${data.balances} балансов, ${data.transactions} транзакций`);
+    if (!res.ok) { toast.error(data.error); setSyncing(false); return; }
+    toast.success(`Синхронизировано: ${data.balances} балансов, ${data.transactions} транзакций`);
     setSyncing(false);
     const credRes = await fetch("/api/exchange/credentials");
     const credData = await credRes.json();
@@ -225,7 +229,6 @@ export default function AccountDetailPage() {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
     </div>
   );
 }

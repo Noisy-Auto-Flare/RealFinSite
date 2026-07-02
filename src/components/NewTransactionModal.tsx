@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Select from "@/components/Select";
+import { useToast } from "@/components/Toast";
 
 interface Props {
   onClose: () => void;
@@ -18,6 +19,7 @@ interface Account {
 type TxType = "income" | "expense" | "transfer" | "exchange";
 
 export default function NewTransactionModal({ onClose }: Props) {
+  const toast = useToast();
   const [step, setStep] = useState(0);
   const [txType, setTxType] = useState<TxType | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -97,11 +99,12 @@ export default function NewTransactionModal({ onClose }: Props) {
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || "Ошибка сохранения");
+      toast.error(data.error || "Ошибка сохранения");
       setLoading(false);
       return;
     }
 
+    toast.success("Операция создана");
     onClose();
     window.location.reload();
   }
