@@ -92,7 +92,10 @@ export default function Select({ value, onChange, children, className = "" }: Se
               background: String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent",
               opacity: opt.disabled ? 0.4 : 1,
               fontFamily: "'Onest', system-ui, -apple-system, sans-serif",
-              animation: open ? `slide-up 0.2s ease-out both` : "none",
+              animationName: open ? "slide-up" : "none",
+              animationDuration: "0.2s",
+              animationTimingFunction: "ease-out",
+              animationFillMode: "both",
               animationDelay: open ? `${i * 25}ms` : "0ms",
             }}
             onMouseEnter={(e) => { if (!opt.disabled) e.currentTarget.style.background = "rgba(233, 177, 163, 0.08)"; }}

@@ -19,12 +19,27 @@ const navItems = [
   { href: "/stats", label: "Сводка", icon: "📊" },
 ];
 
+function NavLink({ href, label, icon, isActive }: { href: string; label: string; icon: string; isActive: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+        isActive
+          ? "bg-[rgba(233,177,163,0.1)] text-[var(--accent)] font-medium"
+          : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[rgba(255,255,255,0.04)]"
+      }`}
+    >
+      <span className="text-lg w-6 text-center shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
+
 export default function Navbar({ role, username }: NavbarProps) {
   const pathname = usePathname();
   const [showNewTx, setShowNewTx] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const pulsedRef = useRef(false);
   const isDashboard = pathname === "/dashboard";
 
@@ -43,7 +58,6 @@ export default function Navbar({ role, username }: NavbarProps) {
 
   useEffect(() => {
     setDrawerOpen(false);
-    setDropdownOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -58,14 +72,76 @@ export default function Navbar({ role, username }: NavbarProps) {
 
   const showFab = !isDashboard || scrolled;
 
+  function sidebarContent(closeNav?: () => void) {
+    return (
+      <>
+        <div className="flex items-center justify-between mb-6 shrink-0">
+          <Link href="/dashboard" className="font-bold text-base tracking-wide">
+            FinTracker
+          </Link>
+          {closeNav && (
+            <button onClick={closeNav} className="text-xl text-[var(--text-muted)]">✕</button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 mb-6 px-1 shrink-0">
+          <span className="w-8 h-8 rounded-full bg-[var(--accent)] text-[var(--bg-primary)] flex items-center justify-center text-sm font-bold shrink-0">
+            {username.charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm truncate">{username}</div>
+            {role === "master" && <span className="text-xs text-[var(--accent)]">Администратор</span>}
+          </div>
+        </div>
+
+        <nav className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
+          {navItems.map((item) => (
+            <NavLink key={item.href} {...item} isActive={isActive(item.href)} />
+          ))}
+
+          <hr className="border-[rgba(255,255,255,0.06)] my-2" />
+
+          <NavLink href="/profile" label="Профиль" icon="👤" isActive={pathname === "/profile"} />
+
+          {role === "master" && (
+            <>
+              <NavLink href="/admin/users" label="Пользователи" icon="👥" isActive={!!pathname?.startsWith("/admin/users")} />
+              <NavLink href="/admin/logs" label="Журнал" icon="📋" isActive={!!pathname?.startsWith("/admin/logs")} />
+            </>
+          )}
+        </nav>
+
+        <div className="flex flex-col gap-2 shrink-0 mt-4">
+          <button
+            onClick={() => setShowNewTx(true)}
+            className="btn btn-primary w-full text-sm"
+          >
+            + Новая операция
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="btn btn-secondary w-full text-sm"
+          >
+            🚪 Выйти
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      {/* Fixed top bar */}
-      <header className="fixed top-0 left-0 right-0 h-14 z-80 flex items-center justify-between px-4 bg-[rgba(15,15,19,0.85)] backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.06)]">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 z-80 flex-col p-4 gap-1 bg-[rgba(15,15,19,0.92)] backdrop-blur-[20px] border-r border-[rgba(255,255,255,0.06)]">
+        {sidebarContent()}
+      </aside>
+
+      {/* Mobile top bar */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-80 flex items-center justify-between px-4 bg-[rgba(15,15,19,0.85)] backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.06)]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setDrawerOpen(true)}
-            className="text-xl p-1 -ml-1 md:hidden"
+            className="text-xl p-1 -ml-1"
             aria-label="Меню"
           >
             ☰
@@ -79,45 +155,9 @@ export default function Navbar({ role, username }: NavbarProps) {
           {role === "master" && (
             <span className="text-xs" title="Администратор">🛡️</span>
           )}
-          <div className="relative">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-            >
-              <span className="w-7 h-7 rounded-full bg-[var(--accent)] text-[var(--bg-primary)] flex items-center justify-center text-xs font-bold">
-                {username.charAt(0).toUpperCase()}
-              </span>
-              <span className="text-sm hidden sm:block">{username}</span>
-            </button>
-
-            {dropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[rgba(21,21,30,0.96)] backdrop-blur-[20px] border border-[rgba(255,255,255,0.06)] rounded-xl shadow-xl z-50 py-1 animate-fade-in">
-                  <Link href="/profile" className="block px-4 py-2 text-sm hover:bg-[rgba(255,255,255,0.06)]">
-                    👤 Профиль
-                  </Link>
-                  {role === "master" && (
-                    <>
-                      <Link href="/admin/users" className="block px-4 py-2 text-sm hover:bg-[rgba(255,255,255,0.06)]">
-                        👥 Пользователи
-                      </Link>
-                      <Link href="/admin/logs" className="block px-4 py-2 text-sm hover:bg-[rgba(255,255,255,0.06)]">
-                        📋 Журнал
-                      </Link>
-                    </>
-                  )}
-                  <hr className="border-[rgba(255,255,255,0.06)] my-1" />
-                  <button
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="w-full text-left px-4 py-2 text-sm text-[var(--danger)] hover:bg-[rgba(255,255,255,0.06)]"
-                  >
-                    🚪 Выйти
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <span className="w-7 h-7 rounded-full bg-[var(--accent)] text-[var(--bg-primary)] flex items-center justify-center text-xs font-bold">
+            {username.charAt(0).toUpperCase()}
+          </span>
         </div>
       </header>
 
@@ -135,7 +175,7 @@ export default function Navbar({ role, username }: NavbarProps) {
         ))}
       </nav>
 
-      {/* FAB */}
+      {/* Mobile FAB */}
       <button
         onClick={() => setShowNewTx(true)}
         className={`fab md:hidden ${showFab ? "visible" : ""} ${showFab && !pulsedRef.current ? "pulse" : ""}`}
@@ -144,81 +184,15 @@ export default function Navbar({ role, username }: NavbarProps) {
         +
       </button>
 
-      {/* Drawer overlay */}
+      {/* Mobile drawer overlay */}
       <div
         className={`drawer-overlay md:hidden ${drawerOpen ? "open" : ""}`}
         onClick={() => setDrawerOpen(false)}
       />
 
-      {/* Drawer panel */}
+      {/* Mobile drawer panel */}
       <div className={`drawer-panel md:hidden ${drawerOpen ? "open" : ""}`}>
-        <div className="flex items-center justify-between mb-4">
-          <span className="font-bold">FinTracker</span>
-          <button onClick={() => setDrawerOpen(false)} className="text-xl text-[var(--text-muted)]">✕</button>
-        </div>
-        <div className="text-sm text-[var(--text-muted)] mb-4">
-          {username}
-          {role === "master" && <span className="badge badge-confirmed ml-2">admin</span>}
-        </div>
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              isActive(item.href)
-                ? "bg-[rgba(233,177,163,0.1)] text-[var(--accent)] border-l-[3px] border-[var(--accent)] pl-[calc(0.75rem-3px)]"
-                : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[rgba(255,255,255,0.04)]"
-            }`}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
-        <hr className="border-[rgba(255,255,255,0.06)] my-2" />
-        <Link
-          href="/profile"
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-            pathname === "/profile"
-              ? "bg-[rgba(233,177,163,0.1)] text-[var(--accent)] border-l-[3px] border-[var(--accent)] pl-[calc(0.75rem-3px)]"
-              : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[rgba(255,255,255,0.04)]"
-          }`}
-        >
-          <span>👤</span>
-          Профиль
-        </Link>
-        {role === "master" && (
-          <>
-            <Link
-              href="/admin/users"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                pathname?.startsWith("/admin/users")
-                  ? "bg-[rgba(233,177,163,0.1)] text-[var(--accent)] border-l-[3px] border-[var(--accent)] pl-[calc(0.75rem-3px)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[rgba(255,255,255,0.04)]"
-              }`}
-            >
-              <span>👥</span>
-              Пользователи
-            </Link>
-            <Link
-              href="/admin/logs"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                pathname?.startsWith("/admin/logs")
-                  ? "bg-[rgba(233,177,163,0.1)] text-[var(--accent)] border-l-[3px] border-[var(--accent)] pl-[calc(0.75rem-3px)]"
-                  : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[rgba(255,255,255,0.04)]"
-              }`}
-            >
-              <span>📋</span>
-              Журнал
-            </Link>
-          </>
-        )}
-        <div className="flex-1" />
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="btn btn-secondary w-full text-sm"
-        >
-          Выйти
-        </button>
+        {sidebarContent(() => setDrawerOpen(false))}
       </div>
 
       {showNewTx && <NewTransactionModal onClose={() => setShowNewTx(false)} />}
