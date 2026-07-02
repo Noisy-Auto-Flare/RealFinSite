@@ -1,26 +1,31 @@
 @import "tailwindcss";
-@import "@fontsource/lilex/400.css";
-@import "@fontsource/lilex/500.css";
-@import "@fontsource/lilex/600.css";
-@import "@fontsource/lilex/700.css";
-@import "@fontsource/martian-mono/400.css";
-@import "@fontsource/martian-mono/500.css";
-@import "@fontsource/martian-mono/600.css";
-@import "@fontsource/martian-mono/700.css";
+@import "@fontsource/onest/400.css";
+@import "@fontsource/onest/500.css";
+@import "@fontsource/onest/600.css";
+@import "@fontsource/onest/700.css";
+@import "@fontsource/dm-mono/400.css";
+@import "@fontsource/dm-mono/500.css";
 
 :root {
-  --bg-primary: #2F435A;
-  --bg-secondary: #3A506B;
-  --bg-card: #3A506B;
+  --bg-primary: #0f0f13;
+  --bg-secondary: #15151e;
+  --bg-card: rgba(255,255,255,0.04);
   --accent: #E9B1A3;
   --accent-hover: #d49a8a;
-  --text-primary: #E9B1A3;
-  --text-secondary: #c4a69e;
-  --text-muted: #8a7a76;
-  --border: #4a6079;
-  --danger: #e74c3c;
-  --success: #2ecc71;
-  --warning: #f39c12;
+  --accent-secondary: #fbbf24;
+  --text-primary: #f1f1f3;
+  --text-secondary: #9b9ba7;
+  --text-muted: #5c5c6a;
+  --border: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.08);
+  --glass-blur: 12px;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
+}
+
+* {
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 html {
@@ -28,7 +33,7 @@ html {
 }
 
 body {
-  background-color: #2F435A;
+  background-color: #0f0f13;
   background-image:
     radial-gradient(at 71.12151183488437% 54.49010901662934%, hsla(60, 3.571428571428607%, 89.01960784313725%, 1) 0%, hsla(60, 3.571428571428607%, 89.01960784313725%, 0) 100%),
     radial-gradient(at 25.77102254986128% 26.097334705255037%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%),
@@ -44,22 +49,22 @@ body {
     radial-gradient(at 0.5899299171732597% 44.10994186524611%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%);
   background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 strong, b, h1, h2, h3, h4, h5, h6, th, label, .font-bold, .font-medium {
-  font-family: 'Martian Mono', monospace;
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  background: var(--bg-card);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
   padding: 1.25rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.2);
   overflow: hidden;
   min-width: 0;
 }
@@ -69,16 +74,15 @@ strong, b, h1, h2, h3, h4, h5, h6, th, label, .font-bold, .font-medium {
 }
 
 input, textarea {
-  background-color: rgba(47, 67, 90, 0.85);
+  background: rgba(255,255,255,0.04);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   padding: 0.5rem 0.75rem;
   width: 100%;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
-  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
-  backdrop-filter: blur(4px);
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
 }
 
 input:focus, textarea:focus {
@@ -101,12 +105,12 @@ button {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1.25rem;
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   font-weight: 500;
   border: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   transition: all 0.15s;
-  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
 }
 
 .btn-primary {
@@ -121,10 +125,9 @@ button {
 }
 
 .btn-secondary {
-  background-color: rgba(58, 80, 107, 0.85);
+  background: rgba(255,255,255,0.06);
   color: var(--text-primary);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(4px);
+  border: 1px solid var(--glass-border);
 }
 
 .btn-secondary:hover {
@@ -139,7 +142,7 @@ button {
 }
 
 .btn-success:hover {
-  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
   transform: translateY(-1px);
 }
 
@@ -149,7 +152,7 @@ button {
 }
 
 .btn-danger:hover {
-  box-shadow: 0 4px 14px rgba(231, 76, 60, 0.35);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
   transform: translateY(-1px);
 }
 
@@ -160,21 +163,21 @@ button {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
-  font-family: 'Martian Mono', monospace;
+  font-family: 'Onest', system-ui, -apple-system, sans-serif;
 }
 
 .badge-confirmed {
-  background-color: rgba(46, 204, 113, 0.2);
+  background-color: rgba(34, 197, 94, 0.2);
   color: var(--success);
 }
 
 .badge-pending {
-  background-color: rgba(52, 152, 219, 0.2);
-  color: #3498db;
+  background-color: rgba(155, 155, 167, 0.15);
+  color: var(--text-secondary);
 }
 
 .badge-candidate {
-  background-color: rgba(243, 156, 18, 0.2);
+  background-color: rgba(245, 158, 11, 0.2);
   color: var(--warning);
 }
 
@@ -185,7 +188,8 @@ button {
   left: 0;
   right: 0;
   min-height: 64px;
-  background-color: var(--bg-secondary);
+  background: rgba(21,21,30,0.92);
+  backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: flex-start;
@@ -205,7 +209,7 @@ button {
   line-height: 1.15;
   color: var(--text-muted);
   text-decoration: none;
-  transition: color 0.15s;
+  transition: color 0.15s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   min-width: 0;
   max-width: 64px;
@@ -215,8 +219,13 @@ button {
   text-overflow: ellipsis;
 }
 
+.bottom-nav a:hover {
+  transform: scale(1.1);
+}
+
 .bottom-nav a.active {
   color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .bottom-nav a span.icon {
@@ -229,6 +238,7 @@ button {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
   z-index: 95;
   opacity: 0;
   pointer-events: none;
@@ -248,7 +258,9 @@ button {
   width: 80vw;
   max-width: 280px;
   background-color: var(--bg-secondary);
+  backdrop-filter: blur(20px);
   border-right: 1px solid var(--border);
+  border-radius: 0 16px 16px 0;
   z-index: 96;
   padding: 1rem;
   display: flex;
@@ -256,6 +268,7 @@ button {
   gap: 0.5rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.4);
 }
 
 .drawer-panel.open {
@@ -301,6 +314,18 @@ button {
   transform: scale(0.95);
 }
 
+.fab.pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.fab.active {
+  transform: rotate(45deg);
+}
+
+.fab.active:hover {
+  transform: rotate(45deg) scale(1.1);
+}
+
 /* ---- Page header buttons (hide on mobile when scrolled) ---- */
 .page-header-btn {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -310,6 +335,63 @@ button {
   opacity: 0;
   transform: scale(0.8);
   pointer-events: none;
+}
+
+/* ---- Animations ---- */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(233, 177, 163, 0.4);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(233, 177, 163, 0.6);
+  }
+}
+
+@keyframes spin-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) rotate(-3deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out both;
+}
+
+.animate-spin-in {
+  animation: spin-in 0.4s ease-out both;
+}
+
+/* ---- Tabular numbers (DM Mono) ---- */
+.tabular-nums {
+  font-family: 'DM Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Responsive helpers ---- */

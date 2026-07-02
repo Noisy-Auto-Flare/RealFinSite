@@ -16,8 +16,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/dm-mono": "^5.2.7",
     "@fontsource/lilex": "^5.2.1",
     "@fontsource/martian-mono": "^5.2.7",
+    "@fontsource/onest": "^5.2.11",
     "@tailwindcss/postcss": "^4.3.2",
     "@tailwindcss/vite": "^4.3.2",
     "bcryptjs": "^3.0.3",
