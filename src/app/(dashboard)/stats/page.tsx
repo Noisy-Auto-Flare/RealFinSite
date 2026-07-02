@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import EmptyState from "@/components/EmptyState";
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 interface Balance {
   accountId: number;
@@ -139,16 +140,15 @@ export default function StatsPage() {
       {/* Capital summary */}
       <div className="card">
         <div className="text-sm text-[var(--text-secondary)] mb-1">Общий капитал</div>
-        <div className="text-2xl md:text-3xl font-bold truncate">
-          {summary.totalCapitalConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          {" "}{sym(baseCurrency)}
+        <div className="text-2xl md:text-3xl font-bold truncate tabular-nums">
+          <AnimatedCounter value={summary.totalCapitalConverted} /> {sym(baseCurrency)}
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm tabular-nums">
           <span className="text-[var(--success)] whitespace-nowrap">
-            +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} доход
+            +<AnimatedCounter value={summary.incomeConverted} /> {sym(baseCurrency)} доход
           </span>
           <span className="text-[var(--danger)] whitespace-nowrap">
-            −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} расход
+            −<AnimatedCounter value={summary.expenseConverted} /> {sym(baseCurrency)} расход
           </span>
         </div>
       </div>
@@ -161,13 +161,13 @@ export default function StatsPage() {
             <div className="w-[150px] h-[150px] md:w-[200px] md:h-[200px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} isAnimationActive={true}>
                     {pieData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "#3A506B", border: "1px solid rgba(233, 177, 163, 0.3)", borderRadius: "8px", fontSize: "12px" }}
+                    contentStyle={{ background: "rgba(21,21,30,0.96)", border: "1px solid var(--glass-border)", borderRadius: "8px", fontSize: "12px", color: "var(--text-primary)" }}
                     formatter={(value: unknown) => `${Number(value).toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym(baseCurrency)}`}
                   />
                 </PieChart>
