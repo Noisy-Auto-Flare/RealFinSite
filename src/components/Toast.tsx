@@ -33,7 +33,7 @@ let nextId = 0;
 function ToastItem({ t, onDone }: { t: Toast; onDone: (id: number) => void }) {
   return (
     <div
-      className={`toast toast-${t.type}`}
+      className={`toast toast-${t.type} animate-toast-in`}
       onClick={() => onDone(t.id)}
     >
       <span>{t.message}</span>

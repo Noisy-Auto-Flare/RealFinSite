@@ -276,7 +276,7 @@ export default function TransactionsPage() {
       {/* Edit modal */}
       {editTx && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) setEditTx(null); }}>
-          <div className="bg-[var(--bg-secondary)] rounded-xl w-full max-w-md p-4 border border-[var(--border)] space-y-4">
+          <div className="bg-[var(--bg-secondary)] rounded-xl w-full max-w-md p-4 border border-[var(--border)] space-y-4 animate-modal-enter">
             <div className="flex justify-between items-center">
               <h3 className="font-bold">Редактировать операцию</h3>
               <button onClick={() => setEditTx(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xl">✕</button>

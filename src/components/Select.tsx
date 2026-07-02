@@ -44,12 +44,12 @@ export default function Select({ value, onChange, children, className = "" }: Se
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm text-left cursor-pointer border transition-all duration-150"
         style={{
-          backgroundColor: "rgba(47, 67, 90, 0.85)",
+          background: "rgba(255,255,255,0.04)",
           color: "var(--text-primary)",
           borderColor: open ? "var(--accent)" : "var(--border)",
           boxShadow: open ? "0 0 0 3px rgba(233, 177, 163, 0.15)" : "none",
           backdropFilter: "blur(4px)",
-          fontFamily: "'Lilex', system-ui, -apple-system, sans-serif",
+          fontFamily: "'Onest', system-ui, -apple-system, sans-serif",
         }}
         onMouseEnter={(e) => { if (!open) e.currentTarget.style.borderColor = "var(--text-secondary)"; }}
         onMouseLeave={(e) => { if (!open) e.currentTarget.style.borderColor = "var(--border)"; }}
@@ -72,11 +72,12 @@ export default function Select({ value, onChange, children, className = "" }: Se
           opacity: open ? 1 : 0,
           transform: open ? "translateY(0)" : "translateY(-8px)",
           pointerEvents: open ? "auto" : "none",
-          backgroundColor: "#2F435A",
-          borderColor: "var(--border)",
+          background: "rgba(21,21,30,0.96)",
+          backdropFilter: "blur(20px)",
+          borderColor: "var(--glass-border)",
         }}
       >
-        {options.map((opt) => (
+        {options.map((opt, i) => (
           <div
             key={opt.value}
             onClick={() => {
@@ -88,14 +89,16 @@ export default function Select({ value, onChange, children, className = "" }: Se
             className="px-3 py-2 text-sm cursor-pointer transition-colors"
             style={{
               color: String(opt.value) === String(value) ? "var(--accent)" : "var(--text-primary)",
-              backgroundColor: String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent",
+              background: String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent",
               opacity: opt.disabled ? 0.4 : 1,
-              fontFamily: "'Lilex', system-ui, -apple-system, sans-serif",
+              fontFamily: "'Onest', system-ui, -apple-system, sans-serif",
+              animation: open ? `slide-up 0.2s ease-out both` : "none",
+              animationDelay: open ? `${i * 25}ms` : "0ms",
             }}
-            onMouseEnter={(e) => { if (!opt.disabled) e.currentTarget.style.backgroundColor = "rgba(233, 177, 163, 0.08)"; }}
+            onMouseEnter={(e) => { if (!opt.disabled) e.currentTarget.style.background = "rgba(233, 177, 163, 0.08)"; }}
             onMouseLeave={(e) => {
               if (!opt.disabled) {
-                e.currentTarget.style.backgroundColor =
+                e.currentTarget.style.background =
                   String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent";
               }
             }}
