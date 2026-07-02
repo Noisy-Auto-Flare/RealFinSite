@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import EmptyState from "@/components/EmptyState";
 
 interface Balance {
   accountId: number;
@@ -195,7 +196,7 @@ export default function StatsPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[var(--text-muted)]">Нет данных</p>
+          <EmptyState icon="📊" title="Нет данных" description="Распределение балансов появится после добавления счетов" />
         )}
       </div>
 

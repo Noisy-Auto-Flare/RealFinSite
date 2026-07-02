@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import EmptyState from "@/components/EmptyState";
 
 interface Balance {
   accountId: number;
@@ -210,7 +211,7 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-[var(--text-muted)]">Нет данных</p>
+            <EmptyState icon="💳" title="Нет данных" description="Добавьте счета для отслеживания балансов" />
           )}
         </div>
       </div>
@@ -253,7 +254,7 @@ export default function DashboardPage() {
         )}
 
         {recentTx.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-sm">Нет операций</p>
+          <EmptyState icon="📋" title="Нет операций" description="Последние транзакции появятся здесь" />
         ) : (
           <div className="space-y-2">
             {recentTx.map((tx) => (

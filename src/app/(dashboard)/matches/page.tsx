@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import EmptyState from "@/components/EmptyState";
 
 interface TxMini {
   id: number;
@@ -83,13 +84,7 @@ export default function MatchesPage() {
       {loading ? (
         <p className="text-[var(--text-muted)]">Загрузка...</p>
       ) : matches.length === 0 ? (
-        <div className="card text-center py-12">
-          <div className="text-3xl mb-2">✅</div>
-          <p className="text-[var(--text-secondary)]">Нет неподтверждённых связей</p>
-          <p className="text-xs text-[var(--text-muted)] mt-1">
-            Связи создаются автоматически после сканирования блокчейна
-          </p>
-        </div>
+        <EmptyState icon="✅" title="Нет неподтверждённых связей" description="Связи создаются автоматически после сканирования блокчейна" />
       ) : (
         <div className="space-y-4">
           {matches.map((m) => (

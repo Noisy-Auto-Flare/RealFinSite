@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Select from "@/components/Select";
+import EmptyState from "@/components/EmptyState";
 
 interface Transaction {
   id: number;
@@ -193,7 +194,7 @@ export default function TransactionsPage() {
         {loading ? (
           <p className="text-[var(--text-muted)]">Загрузка...</p>
         ) : txs.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-center py-8">Нет операций</p>
+          <EmptyState icon="📋" title="Нет операций" description="Транзакции появятся после добавления счетов и проведения операций" />
         ) : (
           <div className="space-y-0.5">
             {txs.map((tx) => (

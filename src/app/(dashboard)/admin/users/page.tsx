@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import EmptyState from "@/components/EmptyState";
 
 interface User {
   id: number;
@@ -100,10 +101,7 @@ export default function AdminUsersPage() {
       )}
 
       {pending.length === 0 && (
-        <div className="card text-center py-8">
-          <div className="text-3xl mb-2">✅</div>
-          <p className="text-[var(--text-secondary)]">Нет новых заявок</p>
-        </div>
+        <EmptyState icon="✅" title="Нет новых заявок" description="Новые пользователи появляются здесь после регистрации" />
       )}
 
       <div className="card">
@@ -112,7 +110,7 @@ export default function AdminUsersPage() {
           <span className="text-xs text-[var(--text-muted)]">{approved.length}</span>
         </div>
         {approved.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-sm">Нет подтверждённых пользователей</p>
+          <EmptyState icon="👥" title="Нет подтверждённых пользователей" description="Подтвердите заявки новых пользователей" />
         ) : (
           <div className="space-y-1">
             {approved.map((u) => (
