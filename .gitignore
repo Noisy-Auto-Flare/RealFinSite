@@ -1,6 +1,7 @@
 # Next.js
 .next/
 out/
+todo.md
 
 # Dependencies
 node_modules/

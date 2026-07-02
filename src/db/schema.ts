@@ -91,8 +91,20 @@ export const exchangeRates = sqliteTable("exchange_rates", {
 export const apiCredentials = sqliteTable("api_credentials", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   accountId: integer("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
-  exchange: text("exchange").notNull(), // bybit
+  exchange: text("exchange").notNull(), // bybit | okx
   apiKey: text("api_key").notNull(),
   apiSecret: text("api_secret").notNull(),
+  passphrase: text("passphrase"),
   lastSyncAt: text("last_sync_at"),
+});
+
+export const actionLogs = sqliteTable("action_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  username: text("username").notNull(),
+  action: text("action").notNull(), // create | update | delete | approve | reject | sync
+  entityType: text("entity_type").notNull(), // account | transaction | user | credential
+  entityId: integer("entity_id"),
+  details: text("details"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
 });

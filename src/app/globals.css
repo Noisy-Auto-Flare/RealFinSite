@@ -1,4 +1,12 @@
 @import "tailwindcss";
+@import "@fontsource/lilex/400.css";
+@import "@fontsource/lilex/500.css";
+@import "@fontsource/lilex/600.css";
+@import "@fontsource/lilex/700.css";
+@import "@fontsource/martian-mono/400.css";
+@import "@fontsource/martian-mono/500.css";
+@import "@fontsource/martian-mono/600.css";
+@import "@fontsource/martian-mono/700.css";
 
 :root {
   --bg-primary: #2F435A;
@@ -16,24 +24,76 @@
 }
 
 body {
-  background-color: var(--bg-primary);
+  background-color: #2F435A;
+  background-image:
+    radial-gradient(at 71.12151183488437% 54.49010901662934%, hsla(60, 3.571428571428607%, 89.01960784313725%, 1) 0%, hsla(60, 3.571428571428607%, 89.01960784313725%, 0) 100%),
+    radial-gradient(at 25.77102254986128% 26.097334705255037%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%),
+    radial-gradient(at 62.588643099336316% 69.18538038851676%, hsla(209.01098901098902, 36.54618473895582%, 51.17647058823529%, 1) 0%, hsla(209.01098901098902, 36.54618473895582%, 51.17647058823529%, 0) 100%),
+    radial-gradient(at 8.665518083845548% 64.72163988836739%, hsla(210.5084745762712, 26.94063926940639%, 42.94117647058823%, 1) 0%, hsla(210.5084745762712, 26.94063926940639%, 42.94117647058823%, 0) 100%),
+    radial-gradient(at 20.644787265576014% 75.97364090869748%, hsla(225.00000000000003, 12.12121212121212%, 74.11764705882354%, 1) 0%, hsla(225.00000000000003, 12.12121212121212%, 74.11764705882354%, 0) 100%),
+    radial-gradient(at 38.33421275075695% 16.766296873151454%, hsla(60, 3.571428571428607%, 89.01960784313725%, 1) 0%, hsla(60, 3.571428571428607%, 89.01960784313725%, 0) 100%),
+    radial-gradient(at 18.128336778437347% 75.2157681526756%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%),
+    radial-gradient(at 11.396458904894624% 93.21603787250746%, hsla(209.01098901098902, 36.54618473895582%, 51.17647058823529%, 1) 0%, hsla(209.01098901098902, 36.54618473895582%, 51.17647058823529%, 0) 100%),
+    radial-gradient(at 99.89313175192972% 36.46272644513893%, hsla(210.5084745762712, 26.94063926940639%, 42.94117647058823%, 1) 0%, hsla(210.5084745762712, 26.94063926940639%, 42.94117647058823%, 0) 100%),
+    radial-gradient(at 46.94691245970903% 72.41349028103336%, hsla(225.00000000000003, 12.12121212121212%, 74.11764705882354%, 1) 0%, hsla(225.00000000000003, 12.12121212121212%, 74.11764705882354%, 0) 100%),
+    radial-gradient(at 16.521386635953906% 29.139402106384594%, hsla(60, 3.571428571428607%, 89.01960784313725%, 1) 0%, hsla(60, 3.571428571428607%, 89.01960784313725%, 0) 100%),
+    radial-gradient(at 0.5899299171732597% 44.10994186524611%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%);
+  background-attachment: fixed;
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+strong, b, h1, h2, h3, h4, h5, h6, th, label, .font-bold, .font-medium {
+  font-family: 'Martian Mono', monospace;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 input, select, textarea {
-  background-color: var(--bg-secondary);
+  background-color: rgba(47, 67, 90, 0.85);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 0.5rem 0.75rem;
   width: 100%;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
+  backdrop-filter: blur(4px);
 }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(233, 177, 163, 0.15);
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--text-secondary);
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23E9B1A3'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px 8px;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+
+select option {
+  background-color: #2F435A;
+  color: var(--text-primary);
+  padding: 0.5rem;
 }
 
 button {
@@ -50,7 +110,9 @@ button {
   border-radius: 0.5rem;
   font-weight: 500;
   border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   transition: all 0.15s;
+  font-family: 'Lilex', system-ui, -apple-system, sans-serif;
 }
 
 .btn-primary {
@@ -60,16 +122,21 @@ button {
 
 .btn-primary:hover {
   background-color: var(--accent-hover);
+  box-shadow: 0 4px 14px rgba(233, 177, 163, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background-color: var(--bg-secondary);
+  background-color: rgba(58, 80, 107, 0.85);
   color: var(--text-primary);
   border: 1px solid var(--border);
+  backdrop-filter: blur(4px);
 }
 
 .btn-secondary:hover {
   border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(233, 177, 163, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn-success {
@@ -77,16 +144,19 @@ button {
   color: white;
 }
 
+.btn-success:hover {
+  box-shadow: 0 4px 14px rgba(46, 204, 113, 0.35);
+  transform: translateY(-1px);
+}
+
 .btn-danger {
   background-color: var(--danger);
   color: white;
 }
 
-.card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
+.btn-danger:hover {
+  box-shadow: 0 4px 14px rgba(231, 76, 60, 0.35);
+  transform: translateY(-1px);
 }
 
 .badge {
@@ -96,6 +166,7 @@ button {
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
+  font-family: 'Martian Mono', monospace;
 }
 
 .badge-confirmed {

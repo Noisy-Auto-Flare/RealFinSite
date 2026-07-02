@@ -4,6 +4,8 @@ import { accounts, balances, accountAddresses, apiCredentials } from "@/db/schem
 import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { encrypt } from "@/lib/crypto";
+import { logAction } from "@/lib/action-log";
+import { auth } from "@/auth";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name, type, currency, addresses, initialBalances, exchange, apiKey, apiSecret } = body;
+  const { name, type, currency, addresses, initialBalances, exchange, apiKey, apiSecret, apiPassphrase } = body;
 
   if (!name || !type) {
     return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
@@ -69,11 +71,13 @@ export async function POST(request: Request) {
 
   if (apiKey && apiSecret && exchange) {
     const encryptedSecret = encrypt(apiSecret);
+    const encryptedPassphrase = apiPassphrase ? encrypt(apiPassphrase) : null;
     db.insert(apiCredentials).values({
       accountId: account.id,
       exchange,
       apiKey,
       apiSecret: encryptedSecret,
+      passphrase: encryptedPassphrase,
     }).run();
   }
 
@@ -92,6 +96,16 @@ export async function POST(request: Request) {
       amount: 0,
     }).run();
   }
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "create",
+    entityType: "account",
+    entityId: account.id,
+    details: `${type} "${name}"`,
+  });
 
   return NextResponse.json(account, { status: 201 });
 }

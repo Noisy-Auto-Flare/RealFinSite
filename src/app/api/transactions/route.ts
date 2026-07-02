@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { transactions, balances, accounts } from "@/db/schema";
-import { eq, and, desc, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, lte, like, sql } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
+import { logAction } from "@/lib/action-log";
+import { auth } from "@/auth";
 
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -12,6 +14,8 @@ export async function GET(request: Request) {
   const accountId = searchParams.get("account_id");
   const type = searchParams.get("type");
   const status = searchParams.get("status");
+  const category = searchParams.get("category");
+  const searchQ = searchParams.get("search");
   const dateFrom = searchParams.get("date_from");
   const dateTo = searchParams.get("date_to");
   const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -22,17 +26,23 @@ export async function GET(request: Request) {
   if (accountId) conditions.push(eq(transactions.accountId, parseInt(accountId, 10)));
   if (type) conditions.push(eq(transactions.type, type));
   if (status) conditions.push(eq(transactions.status, status));
+  if (category) conditions.push(eq(transactions.category, category));
+  if (searchQ) conditions.push(like(transactions.description, `%${searchQ}%`));
   if (dateFrom) conditions.push(gte(transactions.operationDate, dateFrom));
   if (dateTo) conditions.push(lte(transactions.operationDate, dateTo));
 
+  const where = and(...conditions);
+
+  const total = db.select({ count: sql<number>`count(*)` }).from(transactions).where(where).get()?.count || 0;
+
   const list = db.select().from(transactions)
-    .where(and(...conditions))
+    .where(where)
     .orderBy(desc(transactions.operationDate))
     .limit(limit)
     .offset(offset)
     .all();
 
-  return NextResponse.json(list);
+  return NextResponse.json({ transactions: list, total, limit, offset });
 }
 
 export async function POST(request: Request) {
@@ -102,6 +112,16 @@ export async function POST(request: Request) {
       upsertBalance(targetAccountId, currencyTo, amountTo);
     }
   }
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "create",
+    entityType: "transaction",
+    entityId: tx.id,
+    details: `${type} ${finalAmount} ${finalCurrency}`,
+  });
 
   return NextResponse.json(tx, { status: 201 });
 }

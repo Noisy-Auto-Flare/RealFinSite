@@ -31,6 +31,7 @@ export default function NewAccountPage() {
   const [exchange, setExchange] = useState("bybit");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [apiPassphrase, setApiPassphrase] = useState("");
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [initialBalances, setInitialBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,7 @@ export default function NewAccountPage() {
       body.exchange = exchange;
       body.apiKey = apiKey;
       body.apiSecret = apiSecret;
+      if (exchange === "okx") body.apiPassphrase = apiPassphrase;
     }
 
     const res = await fetch("/api/accounts", {
@@ -179,7 +181,7 @@ export default function NewAccountPage() {
                 <div className="space-y-3 bg-[var(--bg-primary)] p-4 rounded-lg">
                   <div>
                     <label className="block text-sm mb-1">Биржа</label>
-                    <select value={exchange} onChange={(e) => setExchange(e.target.value)}>
+                    <select value={exchange} onChange={(e) => { setExchange(e.target.value); setApiPassphrase(""); }}>
                       {EXCHANGES.map((e) => <option key={e} value={e}>{e.toUpperCase()}</option>)}
                     </select>
                   </div>
@@ -191,6 +193,12 @@ export default function NewAccountPage() {
                     <label className="block text-sm mb-1">API Secret</label>
                     <input type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} placeholder="Введите API Secret" />
                   </div>
+                  {exchange === "okx" && (
+                    <div>
+                      <label className="block text-sm mb-1">Passphrase</label>
+                      <input type="password" value={apiPassphrase} onChange={(e) => setApiPassphrase(e.target.value)} placeholder="Введите Passphrase" />
+                    </div>
+                  )}
                   <p className="text-xs text-[var(--text-muted)]">
                     Ключи шифруются и сохраняются в базе. Мы не храним их в открытом виде.
                   </p>

@@ -50,18 +50,43 @@ export default function Navbar({ role, username }: NavbarProps) {
           );
         })}
 
+        <Link
+          href="/profile"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+            pathname === "/profile"
+              ? "bg-[var(--accent)] text-[var(--bg-primary)] font-medium"
+              : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-primary)]"
+          }`}
+        >
+          <span>👤</span>
+          Профиль
+        </Link>
+
         {role === "master" && (
-          <Link
-            href="/admin/users"
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-              pathname?.startsWith("/admin")
-                ? "bg-[var(--accent)] text-[var(--bg-primary)] font-medium"
-                : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-primary)]"
-            }`}
-          >
-            <span>👥</span>
-            Пользователи
-          </Link>
+          <>
+            <Link
+              href="/admin/users"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                pathname?.startsWith("/admin/users")
+                  ? "bg-[var(--accent)] text-[var(--bg-primary)] font-medium"
+                  : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-primary)]"
+              }`}
+            >
+              <span>👥</span>
+              Пользователи
+            </Link>
+            <Link
+              href="/admin/logs"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                pathname?.startsWith("/admin/logs")
+                  ? "bg-[var(--accent)] text-[var(--bg-primary)] font-medium"
+                  : "text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-[var(--bg-primary)]"
+              }`}
+            >
+              <span>📋</span>
+              Журнал
+            </Link>
+          </>
         )}
 
         <div className="flex-1" />

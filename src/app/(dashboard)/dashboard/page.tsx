@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Balance {
   accountId: number;
@@ -38,6 +39,10 @@ interface Transaction {
   currencyTo: string | null;
 }
 
+const CHART_COLORS = ["#E9B1A3", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"];
+
+const baseSym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥" };
+
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [recentTx, setRecentTx] = useState<Transaction[]>([]);
@@ -61,17 +66,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadSummary(baseCurrency);
-    fetch("/api/transactions?limit=10")
+    fetch("/api/transactions?limit=5")
       .then((r) => r.json())
-      .then((tx) => {
+      .then((data) => {
+        const tx = data.transactions || data;
         setRecentTx(tx);
         setPendingCount(tx.filter((t: Transaction) => t.status !== "confirmed").length);
       });
   }, [baseCurrency]);
-
-  function handleCurrencyChange(newCurrency: string) {
-    setBaseCurrency(newCurrency);
-  }
 
   const groupBalancesByAccount = () => {
     if (!summary) return [];
@@ -84,6 +86,20 @@ export default function DashboardPage() {
     }
     return Array.from(map.values());
   };
+
+  const pieData = useMemo(() => {
+    if (!summary) return [];
+    const byCurrency: Record<string, number> = {};
+    for (const b of summary.balances) {
+      const val = b.amountInBase ?? 0;
+      if (val > 0) {
+        byCurrency[b.currency] = (byCurrency[b.currency] || 0) + val;
+      }
+    }
+    return Object.entries(byCurrency)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, value], i) => ({ name, value, color: CHART_COLORS[i % CHART_COLORS.length] }));
+  }, [summary]);
 
   function formatAmount(amount: number, currency: string) {
     const sym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥", USDT: "USDT", SOL: "SOL", BNB: "BNB", TON: "TON" };
@@ -106,10 +122,10 @@ export default function DashboardPage() {
     return <span className="badge badge-candidate">🟡</span>;
   }
 
-  const baseSym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥" };
+  const sym = (cur: string) => baseSym[cur] || cur;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Дашборд</h1>
 
@@ -117,7 +133,7 @@ export default function DashboardPage() {
           {["RUB", "USD"].map((cur) => (
             <button
               key={cur}
-              onClick={() => handleCurrencyChange(cur)}
+              onClick={() => setBaseCurrency(cur)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 baseCurrency === cur
                   ? "bg-[var(--accent)] text-[var(--bg-primary)]"
@@ -130,34 +146,73 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Rates indicator */}
       {ratesDate && (
         <div className="text-xs text-[var(--text-muted)] text-right">
           Курсы: {new Date(ratesDate).toLocaleString("ru-RU")}
         </div>
       )}
 
-      {/* Summary block */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[var(--text-secondary)]">Общий капитал</span>
-          <span className="text-sm text-[var(--text-muted)]">{baseCurrency}</span>
-        </div>
-        <div className="text-3xl font-bold">
-          {summary
-            ? `${summary.totalCapitalConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${baseSym[baseCurrency] || baseCurrency}`
-            : "Загрузка..."}
-        </div>
-        {summary && (
-          <div className="flex gap-4 mt-3 text-sm">
-            <span className="text-[var(--success)]">
-              +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency} доход
-            </span>
-            <span className="text-[var(--danger)]">
-              −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency} расход
-            </span>
+      {/* Summary + Pie chart row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card md:col-span-1">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[var(--text-secondary)]">Общий капитал</span>
+            <span className="text-sm text-[var(--text-muted)]">{baseCurrency}</span>
           </div>
-        )}
+          <div className="text-3xl font-bold">
+            {summary
+              ? `${summary.totalCapitalConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym(baseCurrency)}`
+              : "Загрузка..."}
+          </div>
+          {summary && (
+            <div className="flex gap-4 mt-3 text-sm">
+              <span className="text-[var(--success)]">
+                +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
+              </span>
+              <span className="text-[var(--danger)]">
+                −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="card md:col-span-2">
+          <h2 className="font-medium mb-2">Распределение по валютам</h2>
+          {pieData.length > 0 ? (
+            <div className="flex items-center gap-4">
+              <div className="w-[180px] h-[180px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#3A506B", border: "1px solid rgba(233, 177, 163, 0.3)", borderRadius: "8px", fontSize: "12px" }}
+                      formatter={(value: unknown) => `${Number(value).toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym(baseCurrency)}`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-1 text-sm flex-1">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex justify-between">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+                      {entry.name}
+                    </span>
+                    <span className="text-[var(--text-muted)]">
+                      {entry.value.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--text-muted)]">Нет данных</p>
+          )}
+        </div>
       </div>
 
       {/* Account balances */}
@@ -172,7 +227,7 @@ export default function DashboardPage() {
                   {formatAmount(b.amount, b.currency)}
                   {b.amountInBase !== null && b.currency !== baseCurrency && (
                     <span className="text-[var(--text-muted)] ml-1 text-xs">
-                      (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency})
+                      (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)})
                     </span>
                   )}
                 </span>
@@ -198,7 +253,7 @@ export default function DashboardPage() {
         )}
 
         {recentTx.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-sm">Нет операций. Нажмите «+ Новая операция» чтобы добавить.</p>
+          <p className="text-[var(--text-muted)] text-sm">Нет операций</p>
         ) : (
           <div className="space-y-2">
             {recentTx.map((tx) => (
@@ -209,7 +264,7 @@ export default function DashboardPage() {
                     <div className="text-sm">
                       {tx.type === "exchange"
                         ? `${tx.amountFrom} ${tx.currencyFrom} → ${tx.amountTo} ${tx.currencyTo}`
-                        : `${formatAmount(tx.amount, tx.currency)}`}
+                        : formatAmount(tx.amount, tx.currency)}
                     </div>
                     <div className="text-xs text-[var(--text-muted)]">
                       {tx.category || tx.description || new Date(tx.operationDate).toLocaleDateString("ru-RU")}

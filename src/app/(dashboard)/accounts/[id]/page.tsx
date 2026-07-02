@@ -43,6 +43,7 @@ export default function AccountDetailPage() {
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [exchangeType, setExchangeType] = useState("bybit");
+  const [apiPassphrase, setApiPassphrase] = useState("");
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
@@ -66,7 +67,7 @@ export default function AccountDetailPage() {
     const res = await fetch("/api/exchange/credentials", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId, exchange: exchangeType, apiKey, apiSecret }),
+      body: JSON.stringify({ accountId, exchange: exchangeType, apiKey, apiSecret, apiPassphrase }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error); setSaving(false); return; }
@@ -185,7 +186,7 @@ export default function AccountDetailPage() {
                 Введите API-ключи биржи (read-only) для автоматической синхронизации балансов и истории операций.
               </p>
               {error && <p className="text-sm text-red-400">{error}</p>}
-              <select value={exchangeType} onChange={(e) => setExchangeType(e.target.value)}>
+              <select value={exchangeType} onChange={(e) => { setExchangeType(e.target.value); setApiPassphrase(""); }}>
                 <option value="bybit">Bybit</option>
                 <option value="okx">OKX</option>
               </select>
@@ -202,9 +203,18 @@ export default function AccountDetailPage() {
                 onChange={(e) => setApiSecret(e.target.value)}
                 className="w-full"
               />
+              {exchangeType === "okx" && (
+                <input
+                  type="password"
+                  placeholder="Passphrase"
+                  value={apiPassphrase}
+                  onChange={(e) => setApiPassphrase(e.target.value)}
+                  className="w-full"
+                />
+              )}
               <button
                 onClick={saveCredentials}
-                disabled={saving || !apiKey || !apiSecret}
+                disabled={saving || !apiKey || !apiSecret || (exchangeType === "okx" && !apiPassphrase)}
                 className="btn btn-primary"
               >
                 {saving ? "Сохранение..." : "Сохранить"}

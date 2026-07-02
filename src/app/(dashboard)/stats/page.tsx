@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Balance {
   accountId: number;
@@ -22,6 +23,7 @@ interface Summary {
 }
 
 const baseSym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥" };
+const CHART_COLORS = ["#E9B1A3", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"];
 
 export default function StatsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -56,6 +58,39 @@ export default function StatsPage() {
     setUpdating(false);
   }
 
+  const groupedByCurrency = useMemo(() => {
+    if (!summary) return {};
+    const map: Record<string, { total: number; totalInBase: number }> = {};
+    for (const b of summary.balances) {
+      if (!map[b.currency]) map[b.currency] = { total: 0, totalInBase: 0 };
+      map[b.currency].total += Math.abs(b.amount);
+      if (b.amountInBase !== null) map[b.currency].totalInBase += b.amountInBase;
+    }
+    return map;
+  }, [summary]);
+
+  const totalInBase = useMemo(() =>
+    Object.values(groupedByCurrency).reduce((s, v) => s + v.totalInBase, 0),
+    [groupedByCurrency]
+  );
+
+  const pieData = useMemo(() =>
+    Object.entries(groupedByCurrency)
+      .sort(([, a], [, b]) => b.totalInBase - a.totalInBase)
+      .map(([name, data], i) => ({ name, value: data.totalInBase, color: CHART_COLORS[i % CHART_COLORS.length] })),
+    [groupedByCurrency]
+  );
+
+  const byAccount = useMemo(() => {
+    if (!summary) return [];
+    const map: Record<number, { name: string; balances: Balance[] }> = {};
+    for (const b of summary.balances) {
+      if (!map[b.accountId]) map[b.accountId] = { name: b.accountName, balances: [] };
+      map[b.accountId].balances.push(b);
+    }
+    return Object.entries(map);
+  }, [summary]);
+
   if (!summary) {
     return (
       <div className="max-w-4xl space-y-6">
@@ -65,19 +100,7 @@ export default function StatsPage() {
     );
   }
 
-  // Group by currency for distribution
-  const groupedByCurrency: Record<string, { total: number; totalInBase: number }> = {};
-  for (const b of summary.balances) {
-    if (!groupedByCurrency[b.currency]) {
-      groupedByCurrency[b.currency] = { total: 0, totalInBase: 0 };
-    }
-    groupedByCurrency[b.currency].total += Math.abs(b.amount);
-    if (b.amountInBase !== null) {
-      groupedByCurrency[b.currency].totalInBase += b.amountInBase;
-    }
-  }
-
-  const totalInBase = Object.values(groupedByCurrency).reduce((s, v) => s + v.totalInBase, 0);
+  const sym = (cur: string) => baseSym[cur] || cur;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -117,85 +140,95 @@ export default function StatsPage() {
         <div className="text-sm text-[var(--text-secondary)] mb-1">Общий капитал</div>
         <div className="text-3xl font-bold">
           {summary.totalCapitalConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          {" "}{baseSym[baseCurrency] || baseCurrency}
+          {" "}{sym(baseCurrency)}
         </div>
         <div className="flex gap-4 mt-2 text-sm">
           <span className="text-[var(--success)]">
-            +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency} доход
+            +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} доход
           </span>
           <span className="text-[var(--danger)]">
-            −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency} расход
+            −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} расход
           </span>
         </div>
       </div>
 
-      {/* Distribution by currency */}
+      {/* Distribution by currency — PieChart */}
       <div className="card">
         <h2 className="font-medium mb-3">Распределение по валютам</h2>
-        <div className="space-y-2">
-          {Object.entries(groupedByCurrency)
-            .sort(([, a], [, b]) => b.totalInBase - a.totalInBase)
-            .map(([currency, data]) => {
-              const pct = totalInBase > 0 ? (data.totalInBase / totalInBase) * 100 : 0;
-              return (
-                <div key={currency}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>{currency}</span>
-                    <span>
-                      {data.totalInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
-                      {" "}{baseSym[baseCurrency] || baseCurrency}
-                      {" "}({pct.toFixed(1)}%)
-                    </span>
+        {pieData.length > 0 ? (
+          <div className="flex items-center gap-6">
+            <div className="w-[200px] h-[200px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: "#3A506B", border: "1px solid rgba(233, 177, 163, 0.3)", borderRadius: "8px", fontSize: "12px" }}
+                    formatter={(value: unknown) => `${Number(value).toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym(baseCurrency)}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-2">
+              {pieData.map((entry, i) => {
+                const pct = totalInBase > 0 ? (entry.value / totalInBase) * 100 : 0;
+                return (
+                  <div key={entry.name}>
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+                        {entry.name}
+                      </span>
+                      <span className="text-[var(--text-muted)]">
+                        {entry.value.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} ({pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-[var(--bg-primary)] rounded-full overflow-hidden mt-0.5">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: entry.color }} />
+                    </div>
                   </div>
-                  <div className="h-2 bg-[var(--bg-primary)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--accent)] rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)]">Нет данных</p>
+        )}
       </div>
 
       {/* Distribution by account */}
       <div className="card">
         <h2 className="font-medium mb-3">Балансы по счетам</h2>
         <div className="space-y-3">
-          {(() => {
-            const byAccount: Record<number, { name: string; balances: Balance[] }> = {};
-            for (const b of summary.balances) {
-              if (!byAccount[b.accountId]) byAccount[b.accountId] = { name: b.accountName, balances: [] };
-              byAccount[b.accountId].balances.push(b);
-            }
-            return Object.entries(byAccount).map(([accId, acc]) => {
-              const accountTotal = acc.balances.reduce((s, b) => s + (b.amountInBase ?? 0), 0);
-              return (
-                <div key={accId}>
-                  <div className="flex justify-between text-sm font-medium mb-1">
-                    <span>{acc.name}</span>
-                    <span className="text-[var(--text-muted)]">
-                      {accountTotal.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {baseSym[baseCurrency] || baseCurrency}
+          {byAccount.map(([accId, acc]) => {
+            const accountTotal = acc.balances.reduce((s, b) => s + (b.amountInBase ?? 0), 0);
+            return (
+              <div key={accId}>
+                <div className="flex justify-between text-sm font-medium mb-1">
+                  <span>{acc.name}</span>
+                  <span className="text-[var(--text-muted)]">
+                    {accountTotal.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
+                  </span>
+                </div>
+                {acc.balances.map((b) => (
+                  <div key={b.currency} className="flex justify-between text-sm text-[var(--text-secondary)] pl-3">
+                    <span>{b.currency}</span>
+                    <span>
+                      {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
+                      {b.amountInBase !== null && b.currency !== baseCurrency && (
+                        <span className="text-[var(--text-muted)] ml-1">
+                          (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })})
+                        </span>
+                      )}
                     </span>
                   </div>
-                  {acc.balances.map((b) => (
-                    <div key={b.currency} className="flex justify-between text-sm text-[var(--text-secondary)] pl-3">
-                      <span>{b.currency}</span>
-                      <span>
-                        {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
-                        {b.amountInBase !== null && b.currency !== baseCurrency && (
-                          <span className="text-[var(--text-muted)] ml-1">
-                            (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              );
-            });
-          })()}
+                ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { initializeApp } from "@/lib/init";
+import ClientSessionProvider from "@/components/ClientSessionProvider";
 
 initializeApp();
-
-const inter = Inter({ subsets: ["cyrillic", "latin"] });
 
 export const metadata: Metadata = {
   title: "FinTracker — учёт финансов",
@@ -17,8 +15,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
-      <body className={`${inter.className} min-h-screen`}>
-        {children}
+      <body className="min-h-screen">
+        <ClientSessionProvider>
+          {children}
+        </ClientSessionProvider>
       </body>
     </html>
   );

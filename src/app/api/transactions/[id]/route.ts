@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { transactions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
+import { logAction } from "@/lib/action-log";
+import { auth } from "@/auth";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
@@ -46,6 +48,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   db.delete(transactions).where(eq(transactions.id, txId)).run();
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "delete",
+    entityType: "transaction",
+    entityId: txId,
+    details: `${existing.type} ${existing.amount} ${existing.currency}`,
+  });
 
   return NextResponse.json({ success: true });
 }

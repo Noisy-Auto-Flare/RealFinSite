@@ -61,5 +61,24 @@ createIndex("pair_unique", "exchange_rates", "base_currency, quote_currency", tr
 // === api_credentials ===
 console.log("\n[api_credentials]");
 addColumn("api_credentials", "last_sync_at", "TEXT");
+addColumn("api_credentials", "passphrase", "TEXT");
+
+// === action_logs table ===
+console.log("\n[action_logs]");
+if (!hasIndex("action_logs", "sqlite_autoindex_action_logs_1")) {
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS action_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    username TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    details TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  console.log("  ✓ action_logs table created");
+} else {
+  console.log("  ✔ action_logs already exists");
+}
 
 console.log("\nMigrations complete.");

@@ -4,6 +4,8 @@ import { accounts, apiCredentials } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { encrypt } from "@/lib/crypto";
+import { logAction } from "@/lib/action-log";
+import { auth } from "@/auth";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { accountId, exchange, apiKey, apiSecret } = body;
+  const { accountId, exchange, apiKey, apiSecret, apiPassphrase } = body;
 
   if (!accountId || !exchange || !apiKey || !apiSecret) {
     return NextResponse.json({ error: "accountId, exchange, apiKey, apiSecret are required" }, { status: 400 });
@@ -49,13 +51,25 @@ export async function POST(request: Request) {
   }
 
   const encryptedSecret = encrypt(apiSecret);
+  const encryptedPassphrase = apiPassphrase ? encrypt(apiPassphrase) : null;
 
   const cred = db.insert(apiCredentials).values({
     accountId,
     exchange,
     apiKey,
     apiSecret: encryptedSecret,
+    passphrase: encryptedPassphrase,
   }).returning().get();
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "create",
+    entityType: "credential",
+    entityId: cred.id,
+    details: `${exchange} for account #${accountId}`,
+  });
 
   return NextResponse.json({
     id: cred.id,
@@ -84,6 +98,16 @@ export async function DELETE(request: Request) {
   if (!account) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   db.delete(apiCredentials).where(eq(apiCredentials.id, id)).run();
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "delete",
+    entityType: "credential",
+    entityId: id,
+    details: `${cred.exchange} for account #${cred.accountId}`,
+  });
 
   return NextResponse.json({ success: true });
 }
