@@ -23,6 +23,10 @@
   --warning: #f39c12;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: #2F435A;
   background-image:
@@ -41,13 +45,13 @@ body {
   background-attachment: fixed;
   color: var(--text-primary);
   font-family: 'Lilex', system-ui, -apple-system, sans-serif;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
 
 strong, b, h1, h2, h3, h4, h5, h6, th, label, .font-bold, .font-medium {
   font-family: 'Martian Mono', monospace;
   font-weight: 700;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .card {
@@ -56,9 +60,15 @@ strong, b, h1, h2, h3, h4, h5, h6, th, label, .font-bold, .font-medium {
   border-radius: 0.75rem;
   padding: 1.25rem;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;
+  min-width: 0;
 }
 
-input, select, textarea {
+.card > * {
+  min-width: 0;
+}
+
+input, textarea {
   background-color: rgba(47, 67, 90, 0.85);
   color: var(--text-primary);
   border: 1px solid var(--border);
@@ -71,29 +81,13 @@ input, select, textarea {
   backdrop-filter: blur(4px);
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus, textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(233, 177, 163, 0.15);
 }
 
-input:hover, select:hover, textarea:hover {
+input:hover, textarea:hover {
   border-color: var(--text-secondary);
-}
-
-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23E9B1A3'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 12px 8px;
-  padding-right: 2.25rem;
-  cursor: pointer;
-}
-
-select option {
-  background-color: #2F435A;
-  color: var(--text-primary);
-  padding: 0.5rem;
 }
 
 button {
@@ -184,6 +178,169 @@ button {
   color: var(--warning);
 }
 
+/* ---- Mobile bottom nav ---- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  min-height: 64px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  z-index: 90;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 12px));
+}
+
+.bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 4px;
+  border-radius: 8px;
+  font-size: 0.55rem;
+  line-height: 1.15;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 0;
+  max-width: 64px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bottom-nav a.active {
+  color: var(--accent);
+}
+
+.bottom-nav a span.icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* ---- Drawer ---- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 95;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 80vw;
+  max-width: 280px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  z-index: 96;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.drawer-panel.open {
+  transform: translateX(0);
+}
+
+/* ---- FAB (Floating Action Button) ---- */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  box-shadow: 0 4px 16px rgba(233, 177, 163, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  z-index: 85;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.15s;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.fab.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(233, 177, 163, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* ---- Page header buttons (hide on mobile when scrolled) ---- */
+.page-header-btn {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-header-btn.hidden-mobile {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* ---- Responsive helpers ---- */
+@media (max-width: 768px) {
+  main {
+    padding: 1rem !important;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)) !important;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .bottom-nav a span:not(.icon) {
+    display: none;
+  }
+
+  .bottom-nav a {
+    font-size: 0;
+    gap: 0;
+    padding: 8px 6px;
+  }
+
+  .bottom-nav a span.icon {
+    font-size: 1.3rem;
+  }
+}
+
+/* ---- Selection ---- */
 ::selection {
   background-color: var(--accent);
   color: var(--bg-primary);

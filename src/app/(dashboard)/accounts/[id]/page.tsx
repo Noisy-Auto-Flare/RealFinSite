@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS, formatAmount } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
+import Select from "@/components/Select";
 
 interface Balance {
   currency: string;
@@ -127,9 +128,9 @@ export default function AccountDetailPage() {
 
         <div className="space-y-2">
           {account.balances.map((b) => (
-            <div key={b.currency} className="flex justify-between text-sm">
-              <span className="text-[var(--text-secondary)]">{b.currency}</span>
-              <span className="font-mono">{formatAmount(b.amount, b.currency)}</span>
+            <div key={b.currency} className="flex justify-between text-sm gap-2">
+              <span className="text-[var(--text-secondary)] truncate min-w-0">{b.currency}</span>
+              <span className="font-mono whitespace-nowrap shrink-0">{formatAmount(b.amount, b.currency)}</span>
             </div>
           ))}
         </div>
@@ -138,7 +139,7 @@ export default function AccountDetailPage() {
           <div className="mt-4 space-y-1">
             <p className="text-sm font-medium">Адреса</p>
             {account.addresses.map((a) => (
-              <div key={a.network} className="text-xs text-[var(--text-muted)] font-mono">
+              <div key={a.network} className="text-xs text-[var(--text-muted)] font-mono truncate">
                 {a.network}: {a.address}
               </div>
             ))}
@@ -161,7 +162,7 @@ export default function AccountDetailPage() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={startSync}
                   disabled={syncing}
@@ -186,10 +187,10 @@ export default function AccountDetailPage() {
                 Введите API-ключи биржи (read-only) для автоматической синхронизации балансов и истории операций.
               </p>
               {error && <p className="text-sm text-red-400">{error}</p>}
-              <select value={exchangeType} onChange={(e) => { setExchangeType(e.target.value); setApiPassphrase(""); }}>
+              <Select value={exchangeType} onChange={(e) => { setExchangeType(e.target.value); setApiPassphrase(""); }}>
                 <option value="bybit">Bybit</option>
                 <option value="okx">OKX</option>
-              </select>
+              </Select>
               <input
                 placeholder="API Key"
                 value={apiKey}

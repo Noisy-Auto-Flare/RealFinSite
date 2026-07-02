@@ -69,9 +69,9 @@ export default function MatchesPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Связи транзакций</h1>
-        <button onClick={loadMatches} className="btn btn-secondary text-sm">
+      <div className="flex justify-between items-center gap-2">
+        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Связи транзакций</h1>
+        <button onClick={loadMatches} className="btn btn-secondary text-sm shrink-0">
           🔄 Обновить
         </button>
       </div>
@@ -94,16 +94,16 @@ export default function MatchesPage() {
         <div className="space-y-4">
           {matches.map((m) => (
             <div key={m.id} className="card border-yellow-500/30">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <span className="font-medium text-sm">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
+                <div className="min-w-0">
+                  <span className="font-medium text-sm truncate block">
                     {MATCH_LABELS[m.matchType] || m.matchType}
                   </span>
-                  <span className="text-xs text-[var(--text-muted)] ml-2">
+                  <span className="text-xs text-[var(--text-muted)]">
                     #{m.id}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleAction(m.id, "confirm")}
                     className="btn btn-success text-sm px-3 py-1"
@@ -119,7 +119,7 @@ export default function MatchesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 {/* Transaction A */}
                 <div className="bg-[var(--bg-primary)] rounded-lg p-3">
                   <div className="text-xs text-[var(--text-muted)] mb-1">

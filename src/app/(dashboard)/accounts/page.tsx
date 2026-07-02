@@ -36,9 +36,9 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Счета</h1>
-        <Link href="/accounts/new" className="btn btn-primary">
+      <div className="flex justify-between items-center gap-2">
+        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Счета</h1>
+        <Link href="/accounts/new" className="btn btn-primary text-sm md:text-base shrink-0">
           + Добавить счёт
         </Link>
       </div>
@@ -61,19 +61,19 @@ export default function AccountsPage() {
 
             return (
               <Link key={acc.id} href={`/accounts/${acc.id}`} className="block card hover:border-[var(--accent)] transition-colors">
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{icon}</span>
-                      <div>
-                        <span className="font-medium">{acc.name}</span>
-                        <span className="text-xs text-[var(--text-muted)] ml-2">{label}</span>
+                      <span className="text-xl shrink-0">{icon}</span>
+                      <div className="min-w-0 overflow-hidden">
+                        <span className="font-medium truncate block">{acc.name}</span>
+                        <span className="text-xs text-[var(--text-muted)]">{label}</span>
                       </div>
                     </div>
 
                     <div className="mt-2 space-y-1">
                       {acc.balances.map((b) => (
-                        <div key={b.currency} className="text-sm">
+                        <div key={b.currency} className="text-sm truncate">
                           <span className="text-[var(--text-secondary)]">{b.currency}:</span>{" "}
                           {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
                         </div>
@@ -83,7 +83,7 @@ export default function AccountsPage() {
                     {acc.addresses.length > 0 && (
                       <div className="mt-2 text-xs text-[var(--text-muted)]">
                         {acc.addresses.map((a) => (
-                          <div key={a.network}>
+                          <div key={a.network} className="truncate">
                             {a.network}: {a.address.slice(0, 10)}...{a.address.slice(-4)}
                           </div>
                         ))}
@@ -91,7 +91,7 @@ export default function AccountsPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-xs shrink-0">
                     {acc.credentials ? (
                       <span className="badge badge-confirmed">{acc.credentials.exchange.toUpperCase()}</span>
                     ) : acc.isAutoSync ? (

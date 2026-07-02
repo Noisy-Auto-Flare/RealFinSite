@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Select from "@/components/Select";
 
 interface Props {
   onClose: () => void;
@@ -175,12 +176,12 @@ export default function NewTransactionModal({ onClose }: Props) {
                  txType === "transfer" ? "С какого счёта перевести?" :
                  "С какого счёта списать?"}
               </p>
-              <select value={accountId} onChange={(e) => setAccountId(parseInt(e.target.value) || "")}>
+              <Select value={accountId} onChange={(e) => setAccountId(parseInt(e.target.value) || "")}>
                 <option value="">Выберите счёт</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
-              </select>
+              </Select>
 
               {txType === "exchange" && (
                 <label className="flex items-center gap-2 text-sm">
@@ -205,7 +206,7 @@ export default function NewTransactionModal({ onClose }: Props) {
 
               <div>
                 <label className="block text-sm mb-1">Валюта</label>
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                   <option value="RUB">RUB</option>
                   <option value="USD">USD</option>
                   <option value="USDT">USDT</option>
@@ -213,7 +214,7 @@ export default function NewTransactionModal({ onClose }: Props) {
                   <option value="SOL">SOL</option>
                   <option value="BNB">BNB</option>
                   <option value="TON">TON</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -226,12 +227,12 @@ export default function NewTransactionModal({ onClose }: Props) {
               {txType === "transfer" && (
                 <div>
                   <label className="block text-sm mb-1">Счёт-получатель</label>
-                  <select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
+                  <Select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
                     <option value="">Выберите счёт</option>
                     {otherAccounts().map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
@@ -249,7 +250,7 @@ export default function NewTransactionModal({ onClose }: Props) {
 
               <div>
                 <label className="block text-sm mb-1">Валюта списания</label>
-                <select value={currencyFrom} onChange={(e) => setCurrencyFrom(e.target.value)}>
+                <Select value={currencyFrom} onChange={(e) => setCurrencyFrom(e.target.value)}>
                   <option value="RUB">RUB</option>
                   <option value="USD">USD</option>
                   <option value="USDT">USDT</option>
@@ -257,7 +258,7 @@ export default function NewTransactionModal({ onClose }: Props) {
                   <option value="SOL">SOL</option>
                   <option value="BNB">BNB</option>
                   <option value="TON">TON</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -268,12 +269,12 @@ export default function NewTransactionModal({ onClose }: Props) {
               {!sameAccount && (
                 <div>
                   <label className="block text-sm mb-1">Счёт-получатель</label>
-                  <select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
+                  <Select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
                     <option value="">Выберите счёт</option>
                     {otherAccounts().map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
 
@@ -291,7 +292,7 @@ export default function NewTransactionModal({ onClose }: Props) {
 
               <div>
                 <label className="block text-sm mb-1">Валюта зачисления</label>
-                <select value={currencyTo} onChange={(e) => setCurrencyTo(e.target.value)}>
+                <Select value={currencyTo} onChange={(e) => setCurrencyTo(e.target.value)}>
                   <option value="RUB">RUB</option>
                   <option value="USD">USD</option>
                   <option value="USDT">USDT</option>
@@ -299,7 +300,7 @@ export default function NewTransactionModal({ onClose }: Props) {
                   <option value="SOL">SOL</option>
                   <option value="BNB">BNB</option>
                   <option value="TON">TON</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -327,7 +328,7 @@ export default function NewTransactionModal({ onClose }: Props) {
 
               <div>
                 <label className="block text-sm mb-1">Категория</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                <Select value={category} onChange={(e) => setCategory(e.target.value)}>
                   <option value="">Без категории</option>
                   <option value="Зарплата">Зарплата</option>
                   <option value="Продукты">Продукты</option>
@@ -339,7 +340,7 @@ export default function NewTransactionModal({ onClose }: Props) {
                   <option value="Вывод с биржи">Вывод с биржи</option>
                   <option value="Пополнение">Пополнение</option>
                   <option value="Другое">Другое</option>
-                </select>
+                </Select>
               </div>
 
               <div>

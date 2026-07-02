@@ -105,7 +105,7 @@ export default function StatsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Сводка</h1>
+        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Сводка</h1>
 
         <div className="flex items-center gap-2">
           {ratesDate && (
@@ -138,15 +138,15 @@ export default function StatsPage() {
       {/* Capital summary */}
       <div className="card">
         <div className="text-sm text-[var(--text-secondary)] mb-1">Общий капитал</div>
-        <div className="text-3xl font-bold">
+        <div className="text-2xl md:text-3xl font-bold truncate">
           {summary.totalCapitalConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           {" "}{sym(baseCurrency)}
         </div>
-        <div className="flex gap-4 mt-2 text-sm">
-          <span className="text-[var(--success)]">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+          <span className="text-[var(--success)] whitespace-nowrap">
             +{summary.incomeConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} доход
           </span>
-          <span className="text-[var(--danger)]">
+          <span className="text-[var(--danger)] whitespace-nowrap">
             −{summary.expenseConverted.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} расход
           </span>
         </div>
@@ -156,8 +156,8 @@ export default function StatsPage() {
       <div className="card">
         <h2 className="font-medium mb-3">Распределение по валютам</h2>
         {pieData.length > 0 ? (
-          <div className="flex items-center gap-6">
-            <div className="w-[200px] h-[200px] shrink-0">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="w-[150px] h-[150px] md:w-[200px] md:h-[200px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
@@ -172,17 +172,17 @@ export default function StatsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 space-y-2 min-w-0">
               {pieData.map((entry, i) => {
                 const pct = totalInBase > 0 ? (entry.value / totalInBase) * 100 : 0;
                 return (
                   <div key={entry.name}>
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
-                        {entry.name}
+                    <div className="flex justify-between text-sm gap-2">
+                      <span className="flex items-center gap-1 min-w-0 truncate">
+                        <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: entry.color }} />
+                        <span className="truncate">{entry.name}</span>
                       </span>
-                      <span className="text-[var(--text-muted)]">
+                      <span className="text-[var(--text-muted)] whitespace-nowrap shrink-0">
                         {entry.value.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)} ({pct.toFixed(1)}%)
                       </span>
                     </div>
@@ -207,26 +207,26 @@ export default function StatsPage() {
             const accountTotal = acc.balances.reduce((s, b) => s + (b.amountInBase ?? 0), 0);
             return (
               <div key={accId}>
-                <div className="flex justify-between text-sm font-medium mb-1">
-                  <span>{acc.name}</span>
-                  <span className="text-[var(--text-muted)]">
-                    {accountTotal.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
-                  </span>
-                </div>
-                {acc.balances.map((b) => (
-                  <div key={b.currency} className="flex justify-between text-sm text-[var(--text-secondary)] pl-3">
-                    <span>{b.currency}</span>
-                    <span>
-                      {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
-                      {b.amountInBase !== null && b.currency !== baseCurrency && (
-                        <span className="text-[var(--text-muted)] ml-1">
-                          (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })})
-                        </span>
-                      )}
+                  <div className="flex justify-between text-sm font-medium mb-1 gap-2">
+                    <span className="truncate min-w-0">{acc.name}</span>
+                    <span className="text-[var(--text-muted)] whitespace-nowrap shrink-0">
+                      {accountTotal.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
                     </span>
                   </div>
-                ))}
-              </div>
+                  {acc.balances.map((b) => (
+                    <div key={b.currency} className="flex justify-between text-sm text-[var(--text-secondary)] pl-3 gap-2">
+                      <span className="truncate min-w-0">{b.currency}</span>
+                      <span className="whitespace-nowrap shrink-0">
+                        {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
+                        {b.amountInBase !== null && b.currency !== baseCurrency && (
+                          <span className="text-[var(--text-muted)] ml-1">
+                            (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
             );
           })}
         </div>

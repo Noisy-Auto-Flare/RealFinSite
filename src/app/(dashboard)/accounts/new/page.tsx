@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
+import Select from "@/components/Select";
 
 const ACCOUNT_TYPES: AccountType[] = [
   "crypto_wallet", "cex_exchange", "broker", "hybrid_bank", "fiat_bank",
@@ -88,7 +89,6 @@ export default function NewAccountPage() {
         <div className="text-sm text-[var(--danger)] bg-red-500/10 p-3 rounded-lg">{error}</div>
       )}
 
-      {/* Step indicator */}
       <div className="flex gap-2">
         {[1, 2, 3].map((s) => (
           <div
@@ -101,7 +101,6 @@ export default function NewAccountPage() {
         ))}
       </div>
 
-      {/* Step 1: Name + Type */}
       {step === 1 && (
         <div className="card space-y-4">
           <h2 className="font-medium">Основная информация</h2>
@@ -113,17 +112,17 @@ export default function NewAccountPage() {
 
           <div>
             <label className="block text-sm mb-1">Тип счёта</label>
-            <select value={type} onChange={(e) => { setType(e.target.value as AccountType); setConnectionType("manual"); }}>
+            <Select value={type} onChange={(e) => { setType(e.target.value as AccountType); setConnectionType("manual"); }}>
               {ACCOUNT_TYPES.map((t) => (
                 <option key={t} value={t}>{ACCOUNT_TYPE_LABELS[t]}</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {!multiCurrency && (
             <div>
               <label className="block text-sm mb-1">Основная валюта</label>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                 <option value="RUB">RUB</option>
                 <option value="USD">USD</option>
                 <option value="USDT">USDT</option>
@@ -131,7 +130,7 @@ export default function NewAccountPage() {
                 <option value="SOL">SOL</option>
                 <option value="BNB">BNB</option>
                 <option value="TON">TON</option>
-              </select>
+              </Select>
             </div>
           )}
 
@@ -145,14 +144,13 @@ export default function NewAccountPage() {
         </div>
       )}
 
-      {/* Step 2: Connection type + addresses */}
       {step === 2 && (
         <div className="card space-y-4">
           {isExchange && (
             <>
               <h2 className="font-medium">Подключение к бирже</h2>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setConnectionType("manual")}
                   className={`flex-1 p-3 rounded-lg border-2 text-sm text-left transition-colors ${
@@ -181,9 +179,9 @@ export default function NewAccountPage() {
                 <div className="space-y-3 bg-[var(--bg-primary)] p-4 rounded-lg">
                   <div>
                     <label className="block text-sm mb-1">Биржа</label>
-                    <select value={exchange} onChange={(e) => { setExchange(e.target.value); setApiPassphrase(""); }}>
+                    <Select value={exchange} onChange={(e) => { setExchange(e.target.value); setApiPassphrase(""); }}>
                       {EXCHANGES.map((e) => <option key={e} value={e}>{e.toUpperCase()}</option>)}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="block text-sm mb-1">API Key</label>
@@ -213,18 +211,18 @@ export default function NewAccountPage() {
               <p className="text-sm text-[var(--text-muted)]">Добавьте адреса для автоматического сканирования</p>
 
               {addresses.map((addr, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <select
+                <div key={idx} className="flex flex-col sm:flex-row gap-2">
+                  <Select
                     value={addr.network}
                     onChange={(e) => {
                       const copy = [...addresses];
                       copy[idx].network = e.target.value;
                       setAddresses(copy);
                     }}
-                    className="w-1/3"
+                    className="sm:w-1/3"
                   >
                     {networks.map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                  </Select>
                   <input
                     value={addr.address}
                     onChange={(e) => {
@@ -237,7 +235,7 @@ export default function NewAccountPage() {
                   />
                   <button
                     onClick={() => setAddresses(addresses.filter((_, i) => i !== idx))}
-                    className="btn btn-danger text-sm px-2"
+                    className="btn btn-danger text-sm px-2 sm:w-auto w-full"
                   >
                     ✕
                   </button>
@@ -258,21 +256,22 @@ export default function NewAccountPage() {
               <h2 className="font-medium">Начальный баланс (необязательно)</h2>
 
               {initialBalances.map((bal, idx) => (
-                <div key={idx} className="flex gap-2">
-                  <select
+                <div key={idx} className="flex flex-col sm:flex-row gap-2">
+                  <Select
                     value={bal.currency}
                     onChange={(e) => {
                       const copy = [...initialBalances];
                       copy[idx].currency = e.target.value;
                       setInitialBalances(copy);
                     }}
+                    className="sm:w-auto"
                   >
                     <option value="RUB">RUB</option>
                     <option value="USD">USD</option>
                     <option value="USDT">USDT</option>
                     <option value="CNY">CNY</option>
                     <option value="SOL">SOL</option>
-                  </select>
+                  </Select>
                   <input
                     type="number"
                     value={bal.amount || ""}
@@ -286,7 +285,7 @@ export default function NewAccountPage() {
                   />
                   <button
                     onClick={() => setInitialBalances(initialBalances.filter((_, i) => i !== idx))}
-                    className="btn btn-danger text-sm px-2"
+                    className="btn btn-danger text-sm px-2 sm:w-auto w-full"
                   >
                     ✕
                   </button>
@@ -309,7 +308,6 @@ export default function NewAccountPage() {
         </div>
       )}
 
-      {/* Step 3: Confirmation */}
       {step === 3 && (
         <div className="card space-y-4">
           <h2 className="font-medium">Готово к созданию</h2>

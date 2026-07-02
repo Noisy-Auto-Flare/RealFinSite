@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import Select from "@/components/Select";
 
 interface Transaction {
   id: number;
@@ -40,13 +40,12 @@ export default function TransactionsPage() {
   const [limit] = useState(20);
   const [page, setPage] = useState(0);
 
-  // Filters
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Edit modal
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -140,34 +139,42 @@ export default function TransactionsPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">История операций</h1>
-        <a href="/api/transactions/export" className="btn btn-secondary text-sm">
+        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">История операций</h1>
+        <a href="/api/transactions/export" className="btn btn-secondary text-sm shrink-0">
           📥 CSV
         </a>
       </div>
 
+      {/* Mobile: toggle filter button */}
+      <button
+        onClick={() => setShowFilters(!showFilters)}
+        className="btn btn-secondary text-sm w-full md:hidden"
+      >
+        {showFilters ? "▲ Скрыть фильтры" : "▼ Фильтры"}
+      </button>
+
       {/* Filters + Search */}
-      <div className="flex gap-3 items-center flex-wrap">
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-auto">
+      <div className={`${showFilters ? "flex" : "hidden"} md:flex gap-3 items-center flex-wrap`}>
+        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-auto min-w-[130px]">
           <option value="">Все типы</option>
           {TYPES.filter(Boolean).map((t) => (
             <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
           ))}
-        </select>
+        </Select>
 
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto">
+        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto min-w-[130px]">
           <option value="">Все статусы</option>
           <option value="confirmed">Подтверждённые</option>
           <option value="pending">Новые</option>
           <option value="matched_candidate">Кандидаты</option>
-        </select>
+        </Select>
 
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-auto">
+        <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-auto min-w-[150px]">
           <option value="">Все категории</option>
           {CATEGORIES.filter(Boolean).map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
-        </select>
+        </Select>
 
         <input
           value={searchQuery}
@@ -207,20 +214,18 @@ export default function TransactionsPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   {getStatusBadge(tx.status)}
 
-                  {/* Edit */}
                   <button
                     onClick={() => openEdit(tx)}
-                    className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     title="Редактировать"
                   >
                     ✏️
                   </button>
 
-                  {/* Delete */}
                   {tx.source === "manual" && (
                     <button
                       onClick={() => deleteTx(tx.id)}
-                      className="text-xs text-[var(--text-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-xs text-[var(--text-muted)] hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                       title="Удалить"
                     >
                       🗑️
@@ -232,7 +237,6 @@ export default function TransactionsPage() {
           </div>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 pt-4 border-t border-[var(--border)] mt-2">
             <button
@@ -272,12 +276,12 @@ export default function TransactionsPage() {
 
             <div>
               <label className="block text-sm mb-1">Категория</label>
-              <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+              <Select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
                 <option value="">Без категории</option>
                 {CATEGORIES.filter(Boolean).map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>

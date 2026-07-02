@@ -126,15 +126,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Дашборд</h1>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Дашборд</h1>
 
-        <div className="flex gap-1 bg-[var(--bg-primary)] rounded-lg p-0.5">
+        <div className="flex gap-1 bg-[var(--bg-primary)] rounded-lg p-0.5 shrink-0">
           {["RUB", "USD"].map((cur) => (
             <button
               key={cur}
               onClick={() => setBaseCurrency(cur)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`px-2.5 py-1.5 rounded-md text-xs md:text-sm font-medium transition-colors ${
                 baseCurrency === cur
                   ? "bg-[var(--accent)] text-[var(--bg-primary)]"
                   : "text-[var(--text-secondary)] hover:text-[var(--accent)]"
@@ -179,8 +179,8 @@ export default function DashboardPage() {
         <div className="card md:col-span-2">
           <h2 className="font-medium mb-2">Распределение по валютам</h2>
           {pieData.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <div className="w-[180px] h-[180px] shrink-0">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="w-[140px] h-[140px] md:w-[180px] md:h-[180px] shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
@@ -257,21 +257,21 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-2">
             {recentTx.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                <div className="flex items-center gap-2">
-                  <span>{getTxIcon(tx.type)}</span>
-                  <div>
-                    <div className="text-sm">
+              <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0 gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                  <span className="shrink-0">{getTxIcon(tx.type)}</span>
+                  <div className="min-w-0 overflow-hidden">
+                    <div className="text-sm truncate">
                       {tx.type === "exchange"
                         ? `${tx.amountFrom} ${tx.currencyFrom} → ${tx.amountTo} ${tx.currencyTo}`
                         : formatAmount(tx.amount, tx.currency)}
                     </div>
-                    <div className="text-xs text-[var(--text-muted)]">
+                    <div className="text-xs text-[var(--text-muted)] truncate">
                       {tx.category || tx.description || new Date(tx.operationDate).toLocaleDateString("ru-RU")}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {getStatusBadge(tx.status)}
                 </div>
               </div>
