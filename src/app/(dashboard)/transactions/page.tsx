@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import Select from "@/components/Select";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
+import TransactionRow from "@/components/TransactionRow";
 
 interface Transaction {
   id: number;
@@ -210,42 +211,7 @@ export default function TransactionsPage() {
         ) : (
           <div className="space-y-0.5">
             {txs.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2.5 px-1 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-primary)]/30 rounded transition-colors group">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="text-lg shrink-0">{getTypeIcon(tx.type)}</span>
-                  <div className="min-w-0">
-                    <div className="text-sm truncate">{getTxTypeDisplay(tx)}</div>
-                    <div className="text-xs text-[var(--text-muted)] truncate">
-                      {new Date(tx.operationDate).toLocaleDateString("ru-RU")}
-                      {tx.category && <span> · {tx.category}</span>}
-                      {tx.source.startsWith("scanner") && <span> · авто</span>}
-                      {tx.source === "api_bybit" && <span> · bybit</span>}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {getStatusBadge(tx.status)}
-
-                  <button
-                    onClick={() => openEdit(tx)}
-                    className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                    title="Редактировать"
-                  >
-                    ✏️
-                  </button>
-
-                  {tx.source === "manual" && (
-                    <button
-                      onClick={() => deleteTx(tx.id)}
-                      className="text-xs text-[var(--text-muted)] hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                      title="Удалить"
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-              </div>
+              <TransactionRow key={tx.id} tx={tx} onEdit={openEdit} onDelete={deleteTx} />
             ))}
           </div>
         )}

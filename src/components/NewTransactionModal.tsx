@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import Select from "@/components/Select";
 import { useToast } from "@/components/Toast";
 
@@ -18,7 +18,7 @@ interface Account {
 
 type TxType = "income" | "expense" | "transfer" | "exchange";
 
-export default function NewTransactionModal({ onClose }: Props) {
+export default memo(function NewTransactionModal({ onClose }: Props) {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [txType, setTxType] = useState<TxType | null>(null);
@@ -366,4 +366,4 @@ export default function NewTransactionModal({ onClose }: Props) {
       </div>
     </div>
   );
-}
+});
