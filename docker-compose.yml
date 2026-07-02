@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  fintracker:
+    build: .
+    container_name: fintracker
+    restart: always
+    ports:
+      - "127.0.0.1:8082:3000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=/app/data/fintracker.db
+      - AUTH_SECRET=${AUTH_SECRET}
+      - MASTER_USERNAME=${MASTER_USERNAME:-admin}
+      - MASTER_PASSWORD=${MASTER_PASSWORD:-changeme123}
+      - BSCSCAN_API_KEY=${BSCSCAN_API_KEY:-}
+      - COINGECKO_API_KEY=${COINGECKO_API_KEY:-}
+      - SNOWTRACE_API_KEY=${SNOWTRACE_API_KEY:-}
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY:-}
+      - HELIUS_API_KEY=${HELIUS_API_KEY:-}
+      - TONCENTER_API_KEY=${TONCENTER_API_KEY:-}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
