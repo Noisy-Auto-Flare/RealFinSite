@@ -2,8 +2,10 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
+RUN apk add --no-cache python3 build-base
 COPY package.json package-lock.json* ./
 RUN npm ci --only=production
+RUN apk del python3 build-base
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
