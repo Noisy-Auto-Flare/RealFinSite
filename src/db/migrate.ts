@@ -135,9 +135,10 @@ function updateBalances(sqlite: Database): void {
   }
 }
 
-export function recalculateAllBalances(sqlite: Database): void {
-  sqlite.exec("DELETE FROM balances;");
-  sqlite.exec(`
+export function recalculateAllBalances(sqlitep?: Database): void {
+  const s = sqlitep ?? sqlite;
+  s.exec("DELETE FROM balances;");
+  s.exec(`
     INSERT INTO balances (account_id, currency, amount)
     SELECT
       oe.account_id,
