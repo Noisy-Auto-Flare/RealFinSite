@@ -13,85 +13,70 @@ interface Account {
   name: string;
   type: string;
   currency: string;
-  balances: { currency: string; amount: number }[];
 }
 
-type TxType = "income" | "expense" | "transfer" | "exchange";
+interface Entry {
+  accountId: number | "";
+  currency: string;
+  amount: string;
+  type: "principal" | "fee" | "discount" | "interest" | "coupon";
+}
+
+const CURRENCIES = ["RUB", "USD", "USDT", "CNY", "SOL", "BNB", "TON"];
+const ENTRY_TYPES = ["principal", "fee", "discount", "interest", "coupon"] as const;
 
 export default memo(function NewTransactionModal({ onClose }: Props) {
   const toast = useToast();
-  const [step, setStep] = useState(0);
-  const [txType, setTxType] = useState<TxType | null>(null);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-
-  // Form state
-  const [accountId, setAccountId] = useState<number | "">("");
-  const [counterpartyAccountId, setCounterpartyAccountId] = useState<number | "">("");
-  const [currency, setCurrency] = useState("RUB");
-  const [amount, setAmount] = useState("");
-  const [currencyFrom, setCurrencyFrom] = useState("RUB");
-  const [amountFrom, setAmountFrom] = useState("");
-  const [currencyTo, setCurrencyTo] = useState("USDT");
-  const [amountTo, setAmountTo] = useState("");
-  const [sameAccount, setSameAccount] = useState(true);
-  const [category, setCategory] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [entries, setEntries] = useState<Entry[]>([
+    { accountId: "", currency: "RUB", amount: "", type: "principal" },
+  ]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [createdOperation, setCreatedOperation] = useState<any>(null);
+  const [confirmingFees, setConfirmingFees] = useState(false);
 
   useEffect(() => {
     fetch("/api/accounts").then((r) => r.json()).then(setAccounts);
   }, []);
 
-  const totalSteps = 5;
-
-  function currentAccountBalances() {
-    const acc = accounts.find((a) => a.id === accountId);
-    return acc?.balances.map((b) => b.currency) || [];
+  function addEntry() {
+    setEntries((prev) => [
+      ...prev,
+      { accountId: "", currency: "RUB", amount: "", type: "principal" },
+    ]);
   }
 
-  function otherAccounts() {
-    return accounts.filter((a) => a.id !== accountId);
+  function removeEntry(index: number) {
+    setEntries((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function getAccountCurrencies(accId: number | "") {
-    const acc = accounts.find((a) => a.id === accId);
-    return acc?.balances.map((b) => b.currency) || [acc?.currency].filter(Boolean) || [currency];
+  function updateEntry(index: number, field: keyof Entry, value: string | number) {
+    setEntries((prev) =>
+      prev.map((e, i) => (i === index ? { ...e, [field]: value } : e))
+    );
   }
 
   async function handleSubmit() {
     setLoading(true);
     setError("");
 
-    const body: Record<string, unknown> = {
-      type: txType,
-      accountId,
-      category: category || null,
+    const body = {
+      date,
       description: description || null,
-      operationDate: new Date().toISOString(),
+      category: category || null,
+      entries: entries.map((e) => ({
+        accountId: Number(e.accountId),
+        currency: e.currency,
+        amount: parseFloat(e.amount),
+        type: e.type,
+      })),
     };
 
-    if (txType === "income" || txType === "expense") {
-      body.amount = parseFloat(amount);
-      body.currency = currency;
-    } else if (txType === "transfer") {
-      body.amount = parseFloat(amount);
-      body.currency = currency;
-      body.counterpartyAccountId = counterpartyAccountId;
-    } else if (txType === "exchange") {
-      body.amountFrom = parseFloat(amountFrom);
-      body.currencyFrom = currencyFrom;
-      body.amountTo = parseFloat(amountTo);
-      body.currencyTo = currencyTo;
-      if (!sameAccount) {
-        body.counterpartyAccountId = counterpartyAccountId;
-      } else {
-        body.amount = parseFloat(amountFrom);
-        body.currency = currencyFrom;
-      }
-    }
-
-    const res = await fetch("/api/transactions", {
+    const res = await fetch("/api/operations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -99,31 +84,118 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
 
     if (!res.ok) {
       const data = await res.json();
-      toast.error(data.error || "Ошибка сохранения");
+      setError(data.error || "Error saving operation");
       setLoading(false);
       return;
     }
 
-    toast.success("Операция создана");
+    const data = await res.json();
+
+    if (data.unverifiedFees?.length > 0) {
+      setCreatedOperation(data.operation);
+      setConfirmingFees(true);
+    } else {
+      toast.success("Операция создана");
+      onClose();
+      window.location.reload();
+    }
+  }
+
+  async function verifyFee(feeId: number) {
+    await fetch(`/api/entries/${feeId}/verify`, { method: "PATCH" });
+    setCreatedOperation((prev: any) => ({
+      ...prev,
+      entries: prev.entries.map((e: any) =>
+        e.id === feeId ? { ...e, isVerified: 1 } : e
+      ),
+    }));
+  }
+
+  async function verifyAllFees() {
+    const unverifiedFees = createdOperation.entries.filter((e: any) => !e.isVerified);
+    for (const fee of unverifiedFees) {
+      await fetch(`/api/entries/${fee.id}/verify`, { method: "PATCH" });
+    }
+    setConfirmingFees(false);
+    toast.success("Комиссии подтверждены");
+    onClose();
+    window.location.reload();
+  }
+
+  async function confirmOperation() {
+    await fetch(`/api/operations/${createdOperation.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" }),
+    });
+    toast.success("Операция подтверждена");
     onClose();
     window.location.reload();
   }
 
   function reset() {
-    setStep(0);
-    setTxType(null);
-    setAccountId("");
-    setCounterpartyAccountId("");
-    setCurrency("RUB");
-    setAmount("");
-    setCurrencyFrom("RUB");
-    setAmountFrom("");
-    setCurrencyTo("USDT");
-    setAmountTo("");
-    setCategory("");
+    setDate(new Date().toISOString().split("T")[0]);
     setDescription("");
+    setCategory("");
+    setEntries([{ accountId: "", currency: "RUB", amount: "", type: "principal" }]);
     setError("");
   }
+
+  if (confirmingFees && createdOperation) {
+    const unverifiedFees = createdOperation.entries?.filter((e: any) => !e.isVerified) || [];
+    const allVerified = unverifiedFees.length === 0;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-[var(--bg-secondary)] rounded-xl w-full max-w-lg shadow-2xl border border-[var(--border)] animate-modal-enter">
+          <div className="flex justify-between items-center p-4 border-b border-[var(--border)]">
+            <h2 className="font-bold text-lg">Подтверждение комиссий</h2>
+            <button onClick={() => { reset(); onClose(); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xl">✕</button>
+          </div>
+          <div className="p-4 space-y-4">
+            {!allVerified && (
+              <>
+                <p className="text-sm text-[var(--text-secondary)]">⚠️ Обнаружены неверифицированные комиссии:</p>
+                <div className="space-y-2">
+                  {unverifiedFees.map((fee: any) => (
+                    <div key={fee.id} className="flex items-center justify-between bg-[var(--bg-primary)] p-3 rounded-lg">
+                      <span className="text-sm">
+                        {Math.abs(fee.amount)} {fee.currency} ({fee.type === "fee" ? "комиссия сети" : fee.type})
+                      </span>
+                      <button
+                        onClick={() => verifyFee(fee.id)}
+                        className="btn btn-primary text-sm px-3 py-1"
+                      >
+                        Подтвердить
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={verifyAllFees} className="btn btn-primary flex-1">Подтвердить всё</button>
+                  <button onClick={() => { reset(); onClose(); }} className="btn btn-secondary flex-1">Отклонить</button>
+                  <button onClick={() => { reset(); onClose(); }} className="btn btn-secondary flex-1">Оставить как черновик</button>
+                </div>
+              </>
+            )}
+            {allVerified && (
+              <>
+                <p className="text-sm text-[var(--text-secondary)]">Все комиссии подтверждены. Подтвердите операцию.</p>
+                <div className="flex gap-2">
+                  <button onClick={confirmOperation} className="btn btn-primary flex-1">Подтвердить операцию</button>
+                  <button onClick={() => { reset(); onClose(); }} className="btn btn-secondary flex-1">Закрыть</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const allFilled = entries.every(
+    (e) => e.accountId !== "" && e.amount !== ""
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) { reset(); onClose(); }}}>
@@ -133,235 +205,120 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
           <button onClick={() => { reset(); onClose(); }} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xl">✕</button>
         </div>
 
-        {/* Progress */}
-        <div className="flex gap-1 px-4 pt-3">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={`flex-1 h-1.5 rounded-full transition-colors ${i <= step ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`} />
-          ))}
-        </div>
-
         <div className="p-4 space-y-4">
           {error && <div className="text-sm text-[var(--danger)] bg-red-500/10 p-3 rounded-lg">{error}</div>}
 
-          {/* Step 0: Choose type */}
-          {step === 0 && (
-            <div className="space-y-2">
-              <p className="text-sm text-[var(--text-secondary)] mb-3">Выберите тип операции</p>
-              {[
-                { type: "income" as TxType, icon: "📥", label: "Доход", desc: "Пополнение, зарплата, кэшбэк" },
-                { type: "expense" as TxType, icon: "📤", label: "Расход", desc: "Покупка, перевод человеку" },
-                { type: "transfer" as TxType, icon: "🔄", label: "Перевод между своими", desc: "С одного своего счёта на другой" },
-                { type: "exchange" as TxType, icon: "💱", label: "Обмен / Конвертация", desc: "Разные валюты, включая мама→Alipay" },
-              ].map(({ type, icon, label, desc }) => (
-                <button
-                  key={type}
-                  onClick={() => { setTxType(type); setStep(1); }}
-                  className="w-full text-left p-3 rounded-lg bg-[var(--bg-primary)] hover:border-[var(--accent)] border border-transparent transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{icon}</span>
-                    <div>
-                      <div className="font-medium">{label}</div>
-                      <div className="text-xs text-[var(--text-muted)]">{desc}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <div>
+            <label className="block text-sm mb-1">Дата</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
 
-          {/* Step 1: Select account */}
-          {step === 1 && txType && (
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">
-                {txType === "income" ? "На какой счёт пришли деньги?" :
-                 txType === "expense" ? "С какого счёта списать?" :
-                 txType === "transfer" ? "С какого счёта перевести?" :
-                 "С какого счёта списать?"}
-              </p>
-              <Select value={accountId} onChange={(e) => setAccountId(parseInt(e.target.value) || "")}>
-                <option value="">Выберите счёт</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </Select>
+          <div>
+            <label className="block text-sm mb-1">Описание (необязательно)</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Комментарий к операции" />
+          </div>
 
-              {txType === "exchange" && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={sameAccount} onChange={(e) => setSameAccount(e.target.checked)} className="w-auto" />
-                  В рамках одного счёта (конвертация внутри)
-                </label>
-              )}
+          <div>
+            <label className="block text-sm mb-1">Категория</label>
+            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">Без категории</option>
+              <option value="Зарплата">Зарплата</option>
+              <option value="Продукты">Продукты</option>
+              <option value="Транспорт">Транспорт</option>
+              <option value="Комиссия">Комиссия сети / банка</option>
+              <option value="Перевод маме">Перевод маме</option>
+              <option value="Перевод другому">Перевод другому</option>
+              <option value="Обмен">Обмен валют</option>
+              <option value="Вывод с биржи">Вывод с биржи</option>
+              <option value="Пополнение">Пополнение</option>
+              <option value="Другое">Другое</option>
+            </Select>
+          </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => setStep(0)} className="btn btn-secondary flex-1">Назад</button>
-                <button onClick={() => setStep(2)} disabled={!accountId} className="btn btn-primary flex-1">Далее →</button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Currency/Amount for income/expense/transfer */}
-          {step === 2 && txType && (txType === "income" || txType === "expense" || txType === "transfer") && (
-            <div className="space-y-3">
-              {txType === "income" && <p className="text-sm text-[var(--text-secondary)]">В какой валюте?</p>}
-              {txType === "expense" && <p className="text-sm text-[var(--text-secondary)]">В какой валюте?</p>}
-              {txType === "transfer" && <p className="text-sm text-[var(--text-secondary)]">В какой валюте?</p>}
-
-              <div>
-                <label className="block text-sm mb-1">Валюта</label>
-                <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                  <option value="RUB">RUB</option>
-                  <option value="USD">USD</option>
-                  <option value="USDT">USDT</option>
-                  <option value="CNY">CNY</option>
-                  <option value="SOL">SOL</option>
-                  <option value="BNB">BNB</option>
-                  <option value="TON">TON</option>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">
-                  {txType === "income" ? "Сумма" : txType === "expense" ? "Сумма" : "Сумма перевода"}
-                </label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" min={0} step="any" />
-              </div>
-
-              {txType === "transfer" && (
-                <div>
-                  <label className="block text-sm mb-1">Счёт-получатель</label>
-                  <Select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
-                    <option value="">Выберите счёт</option>
-                    {otherAccounts().map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+          <div className="space-y-3">
+            <label className="block text-sm mb-1">Записи</label>
+            {entries.map((entry, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    value={entry.accountId}
+                    onChange={(e) =>
+                      updateEntry(index, "accountId", parseInt(e.target.value) || "")
+                    }
+                  >
+                    <option value="">Счёт</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
                     ))}
                   </Select>
                 </div>
-              )}
-
-              <div className="flex gap-2">
-                <button onClick={() => setStep(1)} className="btn btn-secondary flex-1">Назад</button>
-                <button onClick={() => setStep(4)} className="btn btn-primary flex-1">Далее →</button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2 (exchange): From */}
-          {step === 2 && txType === "exchange" && (
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">Из какой валюты?</p>
-
-              <div>
-                <label className="block text-sm mb-1">Валюта списания</label>
-                <Select value={currencyFrom} onChange={(e) => setCurrencyFrom(e.target.value)}>
-                  <option value="RUB">RUB</option>
-                  <option value="USD">USD</option>
-                  <option value="USDT">USDT</option>
-                  <option value="CNY">CNY</option>
-                  <option value="SOL">SOL</option>
-                  <option value="BNB">BNB</option>
-                  <option value="TON">TON</option>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">Сумма списания</label>
-                <input type="number" value={amountFrom} onChange={(e) => setAmountFrom(e.target.value)} placeholder="0.00" min={0} step="any" />
-              </div>
-
-              {!sameAccount && (
-                <div>
-                  <label className="block text-sm mb-1">Счёт-получатель</label>
-                  <Select value={counterpartyAccountId} onChange={(e) => setCounterpartyAccountId(parseInt(e.target.value) || "")}>
-                    <option value="">Выберите счёт</option>
-                    {otherAccounts().map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                <div className="w-20 shrink-0">
+                  <Select
+                    value={entry.currency}
+                    onChange={(e) => updateEntry(index, "currency", e.target.value)}
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
                     ))}
                   </Select>
                 </div>
-              )}
-
-              <div className="flex gap-2">
-                <button onClick={() => setStep(1)} className="btn btn-secondary flex-1">Назад</button>
-                <button onClick={() => setStep(3)} className="btn btn-primary flex-1">Далее →</button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3 (exchange only): To */}
-          {step === 3 && txType === "exchange" && (
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">В какую валюту?</p>
-
-              <div>
-                <label className="block text-sm mb-1">Валюта зачисления</label>
-                <Select value={currencyTo} onChange={(e) => setCurrencyTo(e.target.value)}>
-                  <option value="RUB">RUB</option>
-                  <option value="USD">USD</option>
-                  <option value="USDT">USDT</option>
-                  <option value="CNY">CNY</option>
-                  <option value="SOL">SOL</option>
-                  <option value="BNB">BNB</option>
-                  <option value="TON">TON</option>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">Сумма зачисления</label>
-                <input type="number" value={amountTo} onChange={(e) => setAmountTo(e.target.value)} placeholder="0.00" min={0} step="any" />
-              </div>
-
-              {amountFrom && amountTo && currencyFrom && currencyTo && (
-                <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-primary)] p-2 rounded">
-                  Курс: 1 {currencyFrom} = {amountTo && amountFrom ? (parseFloat(amountTo) / parseFloat(amountFrom)).toFixed(6) : "?"} {currencyTo}
+                <div className="w-24 shrink-0">
+                  <input
+                    type="number"
+                    value={entry.amount}
+                    onChange={(e) => updateEntry(index, "amount", e.target.value)}
+                    placeholder="0.00"
+                    step="any"
+                  />
                 </div>
-              )}
-
-              <div className="flex gap-2">
-                <button onClick={() => setStep(2)} className="btn btn-secondary flex-1">Назад</button>
-                <button onClick={() => setStep(4)} className="btn btn-primary flex-1">Далее →</button>
+                <div className="w-24 shrink-0">
+                  <Select
+                    value={entry.type}
+                    onChange={(e) =>
+                      updateEntry(index, "type", e.target.value)
+                    }
+                  >
+                    {ENTRY_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {entries.length > 1 && (
+                  <button
+                    onClick={() => removeEntry(index)}
+                    className="text-[var(--text-muted)] hover:text-[var(--danger)] text-lg px-1 shrink-0"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-            </div>
-          )}
+            ))}
+            <button
+              onClick={addEntry}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              + Добавить запись
+            </button>
+          </div>
 
-          {/* Step 4: Category + Description */}
-          {step === 4 && (
-            <div className="space-y-3">
-              <p className="text-sm text-[var(--text-secondary)]">Дополнительная информация</p>
-
-              <div>
-                <label className="block text-sm mb-1">Категория</label>
-                <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-                  <option value="">Без категории</option>
-                  <option value="Зарплата">Зарплата</option>
-                  <option value="Продукты">Продукты</option>
-                  <option value="Транспорт">Транспорт</option>
-                  <option value="Комиссия">Комиссия сети / банка</option>
-                  <option value="Перевод маме">Перевод маме</option>
-                  <option value="Перевод другому">Перевод другому</option>
-                  <option value="Обмен">Обмен валют</option>
-                  <option value="Вывод с биржи">Вывод с биржи</option>
-                  <option value="Пополнение">Пополнение</option>
-                  <option value="Другое">Другое</option>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1">Описание (необязательно)</label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Комментарий к операции" />
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={() => setStep(txType === "exchange" ? 3 : 2)} className="btn btn-secondary flex-1">Назад</button>
-                <button onClick={handleSubmit} disabled={loading} className="btn btn-primary flex-1">
-                  {loading ? "Сохранение..." : "💾 Сохранить"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Replace step 5+ with the actual step count */}
-          {/* Actually let's fix the step numbering */}
+          <div className="flex gap-2 pt-2">
+            <button onClick={() => { reset(); onClose(); }} className="btn btn-secondary flex-1">
+              Отмена
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !allFilled}
+              className="btn btn-primary flex-1"
+            >
+              {loading ? "Сохранение..." : "💾 Сохранить"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
