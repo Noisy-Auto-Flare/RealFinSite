@@ -259,7 +259,7 @@ describe("docker-compose.yml validation", () => {
 
   it("should expose port 3000 on localhost only", () => {
     const compose = fs.readFileSync("docker-compose.yml", "utf-8");
-    expect(compose).toContain("127.0.0.1:3000:3000");
+    expect(compose).toContain("127.0.0.1:${APP_PORT:-3000}:3000");
   });
 
   it("should have restart policy unless-stopped", () => {

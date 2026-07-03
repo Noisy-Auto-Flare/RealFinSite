@@ -86,6 +86,23 @@ Runs: `DELETE FROM balances` → `INSERT INTO balances SELECT ... SUM(oe.amount)
 | GET | /api/profile | Current user profile |
 | GET | /api/health | Health check |
 
+## Deployment Architecture
+
+```
+Internet → NGINX (port 80/443) → localhost:${APP_PORT} → Docker container (port 3000)
+                                  ↑
+                            gateway for all sites
+```
+
+- **NGINX** is the single entry point — listens on 80/443, terminates SSL, proxies to unique local ports.
+- **Each project** gets its own `docker-compose.yml` with a unique `APP_PORT` (e.g., 3000 for this project, 8082 for another).
+- **Port binding** is always `127.0.0.1:PORT:3000` — never exposed to the internet directly.
+- **SSL** via Certbot (`certbot --nginx -d domain.com`).
+- **Caddy** (optional) used inside Docker Compose only for multi-service projects (frontend + backend), listening on `:80` internally.
+- **Healthcheck** via Docker's built-in mechanism (`curl -f http://localhost:3000/api/health`).
+
+For multi-site setup see `docs/DEPLOY.md`.
+
 ## Design Decisions
 
 1. **Multi-leg operations** over single-row transactions. Enables: fees, coupons, interest per entry; exchange sync with native fees; balance reconciliation per (account, currency).

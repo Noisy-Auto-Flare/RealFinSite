@@ -42,6 +42,7 @@ The automated script (`deploy.sh`) will:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `APP_PORT` | No | `3000` | Host port — change if 3000 conflicts with other projects on this server |
 | `NEXTAUTH_SECRET` | **Yes** | — | Auth session secret (generate: `openssl rand -base64 32`) |
 | `AUTH_SECRET` | **Yes** | — | Auth secret (generate: `openssl rand -base64 32`) |
 | `ENCRYPTION_KEY` | **Yes** | — | API key encryption (generate: `openssl rand -base64 32 \| cut -c1-32`) |
@@ -53,14 +54,16 @@ The automated script (`deploy.sh`) will:
 
 ## Manual Nginx Setup
 
-If not using `deploy.sh`, set up Nginx manually:
+If not using `deploy.sh`, set up Nginx manually.
+
+Replace `PORT` with the value of `APP_PORT` from `.env` (default `3000`):
 
 ```nginx
 server {
     listen 80;
     server_name your-domain.com;
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:PORT;  # 3000 by default
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -76,6 +79,8 @@ sudo ln -s /etc/nginx/sites-available/your-domain.com /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d your-domain.com
 ```
+
+> **Multi-site pattern:** Each project on the same server needs a unique `APP_PORT` (e.g., `3000` for FinTracker, `8082` for another app). NGINX proxies each domain to its respective port. See `docs/ARCHITECTURE.md` for the full architecture.
 
 ## Backup & Restore
 
