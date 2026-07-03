@@ -154,6 +154,10 @@ function updateBalances(sqlite: Database): void {
 
 export function recalculateAllBalances(sqlitep?: Database): void {
   const s = sqlitep ?? sqlite;
+  if (!tableExists(s, "balances")) {
+    console.log("  ✔ balances table does not exist, skipping recalculation");
+    return;
+  }
   s.exec("DELETE FROM balances;");
   s.exec(`
     INSERT INTO balances (account_id, currency, amount)
@@ -188,7 +192,49 @@ export function runMigrations(sqlitep?: Database): void {
 
   console.log("Running migrations...\n");
 
-  console.log("[transactions]");
+  // Ensure base Drizzle schema tables exist (for fresh deployments)
+  console.log("[base schema]");
+  createTable(s, "users", `(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  createTable(s, "accounts", `(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'RUB',
+    is_active INTEGER DEFAULT 1,
+    is_auto_sync INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+  createTable(s, "balances", `(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    currency TEXT NOT NULL,
+    amount REAL NOT NULL DEFAULT 0
+  )`);
+  createTable(s, "exchange_rates", `(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    base_currency TEXT NOT NULL,
+    quote_currency TEXT NOT NULL,
+    rate REAL NOT NULL
+  )`);
+  createTable(s, "api_credentials", `(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    exchange TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    api_secret TEXT NOT NULL,
+    passphrase TEXT,
+    last_sync_at TEXT
+  )`);
+
+  console.log("\n[transactions]");
   addColumn(s, "transactions", "from_address", "TEXT");
   addColumn(s, "transactions", "to_address", "TEXT");
   addColumn(s, "transactions", "block_timestamp", "INTEGER");
