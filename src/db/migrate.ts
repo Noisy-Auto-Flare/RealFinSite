@@ -58,6 +58,99 @@ function createTable(name: string, definition: string): void {
   console.log(`  ✓ ${name} created`);
 }
 
+function migrateToMultiLeg(sqlite: Database): void {
+  if (!tableExists("transactions")) {
+    console.log("  ✔ transactions table does not exist, skipping migration");
+    return;
+  }
+
+  console.log("  ✓ migrating transactions to operations/entries model...");
+
+  const rows = sqlite.prepare("SELECT * FROM transactions").all() as any[];
+
+  for (const tx of rows) {
+    const opResult = sqlite.prepare(`
+      INSERT INTO operations (user_id, description, category, date, source, tx_hash, from_address, to_address, block_timestamp, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')
+    `).run(
+      tx.user_id,
+      tx.description,
+      tx.category,
+      tx.operation_date,
+      tx.source,
+      tx.tx_hash,
+      tx.from_address,
+      tx.to_address,
+      tx.block_timestamp
+    );
+    const operationId = opResult.lastInsertRowid as number;
+
+    if (tx.type === "income") {
+      sqlite.prepare(`
+        INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+        VALUES (?, ?, ?, ?, 'principal', 1)
+      `).run(operationId, tx.account_id, tx.currency, tx.amount);
+    } else if (tx.type === "expense") {
+      sqlite.prepare(`
+        INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+        VALUES (?, ?, ?, ?, 'principal', 1)
+      `).run(operationId, tx.account_id, tx.currency, -Math.abs(tx.amount));
+    } else if (tx.type === "transfer") {
+      sqlite.prepare(`
+        INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+        VALUES (?, ?, ?, ?, 'principal', 1)
+      `).run(operationId, tx.account_id, tx.currency, -Math.abs(tx.amount));
+
+      if (tx.counterparty_account_id != null) {
+        sqlite.prepare(`
+          INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+          VALUES (?, ?, ?, ?, 'principal', 1)
+        `).run(operationId, tx.counterparty_account_id, tx.currency, Math.abs(tx.amount));
+      }
+    } else if (tx.type === "exchange") {
+      const amountFrom = tx.amount_from ?? 0;
+      const currencyFrom = tx.currency_from ?? tx.currency;
+      sqlite.prepare(`
+        INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+        VALUES (?, ?, ?, ?, 'principal', 1)
+      `).run(operationId, tx.account_id, currencyFrom, -Math.abs(amountFrom));
+
+      const amountTo = tx.amount_to ?? 0;
+      const currencyTo = tx.currency_to ?? tx.currency;
+      sqlite.prepare(`
+        INSERT INTO operation_entries (operation_id, account_id, currency, amount, type, is_verified)
+        VALUES (?, ?, ?, ?, 'principal', 1)
+      `).run(operationId, tx.account_id, currencyTo, Math.abs(amountTo));
+    }
+  }
+
+  sqlite.exec("DROP TABLE IF EXISTS matched_transactions;");
+  sqlite.exec("DROP TABLE IF EXISTS transactions;");
+  console.log("  ✓ dropped old tables (matched_transactions, transactions)");
+}
+
+function updateBalances(sqlite: Database): void {
+  if (hasColumn("balances", "updated_at")) {
+    console.log("  ⚠ balances.updated_at column is deprecated and will be removed in a future version");
+  }
+}
+
+export function recalculateAllBalances(sqlite: Database): void {
+  sqlite.exec("DELETE FROM balances;");
+  sqlite.exec(`
+    INSERT INTO balances (account_id, currency, amount)
+    SELECT
+      oe.account_id,
+      oe.currency,
+      COALESCE(SUM(oe.amount), 0) as amount
+    FROM operation_entries oe
+    JOIN operations o ON oe.operation_id = o.id
+    WHERE o.status = 'confirmed'
+    GROUP BY oe.account_id, oe.currency;
+  `);
+  console.log("  ✓ balances recalculated from confirmed entries");
+}
+
 console.log("Running migrations...\n");
 
 // === transactions table ===
@@ -135,5 +228,14 @@ createTable("balance_snapshots", `(
     comment TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`);
+
+console.log("\n[multi-leg migration]");
+migrateToMultiLeg(sqlite);
+
+console.log("\n[balance updates]");
+updateBalances(sqlite);
+
+console.log("\n[recalculate balances]");
+recalculateAllBalances(sqlite);
 
 console.log("\nMigrations complete.");
