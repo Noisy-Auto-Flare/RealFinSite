@@ -27,7 +27,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl && \
+    mkdir -p /data /logs /backups && \
+    chown nextjs:nodejs /data /logs /backups
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
