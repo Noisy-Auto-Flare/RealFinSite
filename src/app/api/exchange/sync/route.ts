@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    let result: { balances: number; transactions: number };
+    let result: { balances: number; operations: number };
 
     if (cred.exchange === "bybit") {
       const c = bybitCreds(accountId);
@@ -54,13 +54,13 @@ export async function POST(request: Request) {
       action: "sync",
       entityType: "account",
       entityId: accountId,
-      details: `${cred.exchange}: ${result.balances} balances, ${result.transactions} transactions`,
+      details: `${cred.exchange}: ${result.balances} balances, ${result.operations} operations`,
     });
 
     return NextResponse.json({
       success: true,
       balances: result.balances,
-      transactions: result.transactions,
+      operations: result.operations,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Sync failed";

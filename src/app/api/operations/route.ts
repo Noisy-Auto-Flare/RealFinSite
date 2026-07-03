@@ -7,7 +7,7 @@ import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/db/migrate";
 
-function detectImplicitFees(entries: { accountId: number; currency: string; amount: number; type: string }[]) {
+function detectImplicitFees(entries: { accountId: number; currency: string; amount: number; type: string }[]): { accountId: number; currency: string; deficit: number }[] {
   const principalSum: Record<string, number> = {};
   for (const e of entries) {
     if (e.type === "principal") {
@@ -15,20 +15,16 @@ function detectImplicitFees(entries: { accountId: number; currency: string; amou
       principalSum[key] = (principalSum[key] || 0) + e.amount;
     }
   }
-  const fees: typeof entries = [];
+  const fees: { accountId: number; currency: string; deficit: number }[] = [];
+  const seen = new Set<string>();
   for (const e of entries) {
     if (e.type !== "principal") continue;
     const key = `${e.accountId}:${e.currency}`;
-    if (Math.abs(principalSum[key]) < 1e-9) continue;
-    if (principalSum[key] > 0) {
-      if (e.amount < 0) {
-        fees.push({ ...e, type: "fee" });
-      }
-    } else {
-      if (e.amount > 0) {
-        fees.push({ ...e, type: "fee" });
-      }
-    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const sum = principalSum[key];
+    if (Math.abs(sum) < 1e-9) continue;
+    fees.push({ accountId: e.accountId, currency: e.currency, deficit: sum });
   }
   return fees;
 }
@@ -65,35 +61,33 @@ export async function POST(request: Request) {
     status: status || "draft",
   }).returning().get();
 
-  // Detect fees FIRST
-  const feeCandidates = detectImplicitFees(entries);
-
-  // Build final entry list, splitting outflows where fees exist
-  const feeMap = new Map<string, number>();
-  for (const f of feeCandidates) {
-    feeMap.set(`${f.accountId}:${f.currency}`, f.amount);
+  // Detect fee deficits per (account, currency)
+  const feeDeficits = new Map<string, number>();
+  for (const f of detectImplicitFees(entries)) {
+    feeDeficits.set(`${f.accountId}:${f.currency}`, f.deficit);
   }
 
   const finalEntries: any[] = [];
+  const splitKeys = new Set<string>();
   for (const entry of entries) {
     const key = `${entry.accountId}:${entry.currency}`;
-    const feeAmount = feeMap.get(key);
-    if (feeAmount && feeAmount !== 0 && entry.amount < 0) {
+    const deficit = feeDeficits.get(key);
+    if (deficit !== undefined && !splitKeys.has(key) && Math.sign(entry.amount) === Math.sign(deficit)) {
+      splitKeys.add(key);
       finalEntries.push({
         accountId: entry.accountId,
         currency: entry.currency,
-        amount: entry.amount - feeAmount,
+        amount: entry.amount - deficit,
         type: "principal",
         isVerified: 1,
       });
       finalEntries.push({
         accountId: entry.accountId,
         currency: entry.currency,
-        amount: feeAmount,
+        amount: deficit,
         type: "fee",
         isVerified: 0,
       });
-      feeMap.delete(key);
     } else {
       finalEntries.push({
         accountId: entry.accountId,
@@ -128,7 +122,7 @@ export async function POST(request: Request) {
     action: "create",
     entityType: "operation",
     entityId: op.id,
-    details: `${category || "uncategorized"} operation with ${entryRows.length} entries`,
+    details: `${category || "uncategorized"} operation with ${finalEntries.length} entries`,
   });
 
   const created = db.select().from(operations).where(eq(operations.id, op.id)).get();
