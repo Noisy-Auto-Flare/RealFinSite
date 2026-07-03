@@ -65,28 +65,55 @@ export async function POST(request: Request) {
     status: status || "draft",
   }).returning().get();
 
-  const entryRows = entries.map((e: { accountId: number; currency: string; amount: number; type?: string }) => ({
-    operationId: op.id,
-    accountId: e.accountId,
-    currency: e.currency,
-    amount: e.amount,
-    type: e.type || "principal",
-    isVerified: e.type === "fee" ? 1 : 0,
-  }));
+  // Detect fees FIRST
+  const feeCandidates = detectImplicitFees(entries);
 
-  for (const row of entryRows) {
-    db.insert(operationEntries).values(row).run();
+  // Build final entry list, splitting outflows where fees exist
+  const feeMap = new Map<string, number>();
+  for (const f of feeCandidates) {
+    feeMap.set(`${f.accountId}:${f.currency}`, f.amount);
   }
 
-  const fees = detectImplicitFees(entryRows);
-  for (const fee of fees) {
+  const finalEntries: any[] = [];
+  for (const entry of entries) {
+    const key = `${entry.accountId}:${entry.currency}`;
+    const feeAmount = feeMap.get(key);
+    if (feeAmount && feeAmount !== 0 && entry.amount < 0) {
+      finalEntries.push({
+        accountId: entry.accountId,
+        currency: entry.currency,
+        amount: entry.amount - feeAmount,
+        type: "principal",
+        isVerified: 1,
+      });
+      finalEntries.push({
+        accountId: entry.accountId,
+        currency: entry.currency,
+        amount: feeAmount,
+        type: "fee",
+        isVerified: 0,
+      });
+      feeMap.delete(key);
+    } else {
+      finalEntries.push({
+        accountId: entry.accountId,
+        currency: entry.currency,
+        amount: entry.amount,
+        type: entry.type || "principal",
+        isVerified: entry.isVerified ?? 1,
+      });
+    }
+  }
+
+  // Insert ALL entries
+  for (const entry of finalEntries) {
     db.insert(operationEntries).values({
       operationId: op.id,
-      accountId: fee.accountId,
-      currency: fee.currency,
-      amount: fee.amount,
-      type: "fee",
-      isVerified: 0,
+      accountId: entry.accountId,
+      currency: entry.currency,
+      amount: entry.amount,
+      type: entry.type,
+      isVerified: entry.isVerified,
     }).run();
   }
 
