@@ -162,7 +162,7 @@ export default function Navbar({ role, username }: NavbarProps) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="bottom-nav lg:hidden">
+      <nav className="bottom-nav flex lg:hidden">
         {navItems.map((item) => (
           <Link
             key={item.href}
