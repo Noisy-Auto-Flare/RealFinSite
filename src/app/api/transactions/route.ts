@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { transactions, balances, accounts } from "@/db/schema";
+import { balances, accounts } from "@/db/schema";
 import { eq, and, desc, gte, lte, like, sql } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { logAction } from "@/lib/action-log";

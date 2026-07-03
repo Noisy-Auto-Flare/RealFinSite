@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { transactions, accounts } from "@/db/schema";
+import { accounts } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 

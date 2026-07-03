@@ -1,6 +1,5 @@
 import { fetchAndStoreRates } from "@/lib/rates/coingecko";
 import { runScannerCycle } from "./runner";
-import { runMatcher } from "./matcher";
 
 export async function runRateUpdate(): Promise<void> {
   try {
@@ -15,9 +14,7 @@ export async function runScannerCycleFull(): Promise<void> {
   try {
     console.log(`[scheduler] Scanner cycle starting at ${new Date().toISOString()}`);
     await runScannerCycle();
-    console.log(`[scheduler] Scanner cycle done, running matcher`);
-    await runMatcher();
-    console.log(`[scheduler] Matcher done at ${new Date().toISOString()}`);
+    console.log(`[scheduler] Scanner cycle done at ${new Date().toISOString()}`);
   } catch (e) {
     console.error("[scheduler] Scanner cycle failed:", e);
   }

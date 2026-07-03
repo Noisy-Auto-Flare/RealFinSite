@@ -25,6 +25,41 @@ function runMigrations(): void {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS operations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    description TEXT,
+    category TEXT,
+    date TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'manual',
+    tx_hash TEXT,
+    from_address TEXT,
+    to_address TEXT,
+    block_timestamp INTEGER,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS operation_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    operation_id INTEGER NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+    account_id INTEGER NOT NULL REFERENCES accounts(id),
+    currency TEXT NOT NULL,
+    amount REAL NOT NULL,
+    type TEXT NOT NULL DEFAULT 'principal',
+    is_verified INTEGER NOT NULL DEFAULT 0
+  )`);
+
+  sqlite.exec(`CREATE TABLE IF NOT EXISTS balance_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    currency TEXT NOT NULL,
+    amount REAL NOT NULL,
+    date TEXT NOT NULL,
+    comment TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   sqlite.close();
 }
 

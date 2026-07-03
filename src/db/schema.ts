@@ -33,47 +33,45 @@ export const balances = sqliteTable("balances", {
   accountId: integer("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   currency: text("currency").notNull(),
   amount: real("amount").notNull().default(0),
-  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP"),
 }, (table) => ({
   accountCurrencyUnique: uniqueIndex("account_currency_unique").on(table.accountId, table.currency),
 }));
 
-export const transactions = sqliteTable("transactions", {
+export const operations = sqliteTable("operations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  accountId: integer("account_id").notNull().references(() => accounts.id),
-  counterpartyAccountId: integer("counterparty_account_id").references(() => accounts.id),
   userId: integer("user_id").notNull().references(() => users.id),
-  type: text("type").notNull(), // income | expense | transfer | exchange
-  status: text("status").notNull().default("confirmed"), // confirmed | pending | matched_candidate
-  source: text("source").notNull().default("manual"), // manual | scanner_evm | scanner_solana | scanner_ton | api_bybit
-
-  amountFrom: real("amount_from"),
-  currencyFrom: text("currency_from"),
-
-  amountTo: real("amount_to"),
-  currencyTo: text("currency_to"),
-
-  amount: real("amount").notNull(),
-  currency: text("currency").notNull(),
-
+  description: text("description"),
+  category: text("category"),
+  date: text("date").notNull(),
+  source: text("source").notNull().default("manual"),
   txHash: text("tx_hash"),
-  externalId: text("external_id"),
   fromAddress: text("from_address"),
   toAddress: text("to_address"),
   blockTimestamp: integer("block_timestamp"),
-
-  category: text("category"),
-  description: text("description"),
-  operationDate: text("operation_date").notNull(),
+  status: text("status").notNull().default("draft"),
   createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
 });
 
-export const matchedTransactions = sqliteTable("matched_transactions", {
+export const operationEntries = sqliteTable("operation_entries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  transactionAId: integer("transaction_a_id").notNull().references(() => transactions.id),
-  transactionBId: integer("transaction_b_id").notNull().references(() => transactions.id),
-  matchType: text("match_type").notNull(), // internal_transfer | exchange_pair | auto_suggested
-  status: text("status").notNull().default("suggested"), // suggested | confirmed | rejected
+  operationId: integer("operation_id").notNull()
+    .references(() => operations.id, { onDelete: "cascade" }),
+  accountId: integer("account_id").notNull()
+    .references(() => accounts.id),
+  currency: text("currency").notNull(),
+  amount: real("amount").notNull(),
+  type: text("type").notNull().default("principal"),
+  isVerified: integer("is_verified").notNull().default(0),
+});
+
+export const balanceSnapshots = sqliteTable("balance_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  accountId: integer("account_id").notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
+  currency: text("currency").notNull(),
+  amount: real("amount").notNull(),
+  date: text("date").notNull(),
+  comment: text("comment"),
   createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
 });
 

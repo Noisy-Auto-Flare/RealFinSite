@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { accountAddresses, accounts, transactions, balances } from "@/db/schema";
+import { accountAddresses, accounts, balances } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
 
