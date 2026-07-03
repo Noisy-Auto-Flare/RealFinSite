@@ -129,7 +129,12 @@ export async function POST(request: Request) {
   const createdEntries = db.select().from(operationEntries)
     .where(eq(operationEntries.operationId, op.id)).all();
 
-  return NextResponse.json({ ...created, entries: createdEntries }, { status: 201 });
+  const unverifiedFees = createdEntries.filter((e) => !e.isVerified);
+
+  return NextResponse.json({
+    operation: { ...created, entries: createdEntries },
+    unverifiedFees: unverifiedFees.length > 0 ? unverifiedFees : undefined,
+  }, { status: 201 });
 }
 
 export async function GET(request: Request) {
