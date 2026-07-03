@@ -4,9 +4,9 @@
 
 - Ubuntu 22.04+ server
 - Docker + Docker Compose (v2)
-- Nginx
-- Domain name pointing to the server
 - Git
+- Domain name pointing to the server (optional — without it, the app runs on localhost:3000)
+- Nginx + Certbot (auto-installed if not present, only needed with a domain)
 
 ## Quick Deploy
 
@@ -54,7 +54,9 @@ The automated script (`deploy.sh`) will:
 
 ## Manual Nginx Setup
 
-If not using `deploy.sh`, set up Nginx manually.
+`deploy.sh` handles this automatically — create config, `nginx -t && reload`, and `certbot --nginx` if certbot is installed.
+
+If running manually instead:
 
 Replace `PORT` with the value of `APP_PORT` from `.env` (default `3000`):
 

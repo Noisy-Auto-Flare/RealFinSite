@@ -14,13 +14,23 @@ exec > >(tee -a "$DEPLOY_LOG") 2>&1
 
 command -v docker          >/dev/null 2>&1 || err "docker not found"
 command -v docker compose  >/dev/null 2>&1 || err "docker compose not found"
-command -v nginx           >/dev/null 2>&1 || err "nginx not found"
 
 info "Starting deploy at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
+# --- source .env ---
+if [ -f .env ]; then
+  set -a; source .env; set +a
+  info "Loaded .env"
+fi
+APP_PORT="${APP_PORT:-3000}"
+
 DOMAIN="${1:-}"
 if [ -z "$DOMAIN" ]; then
-  read -rp "Enter domain name (leave empty to skip nginx): " DOMAIN
+  read -rp "Enter domain name (leave empty to skip nginx/ssl): " DOMAIN
+fi
+
+if [ -n "$DOMAIN" ]; then
+  command -v nginx >/dev/null 2>&1 || err "nginx not found — apt install nginx"
 fi
 
 # --- backup database before deploy ---
@@ -118,9 +128,44 @@ docker exec fintracker node /app/server.js --migrate 2>/dev/null || \
   warn "Migration command failed — run manually: docker exec fintracker node /app/server.js --migrate"
 
 # --- nginx ---
-NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
-if [ -n "$DOMAIN" ] && [ -f "$NGINX_CONF" ]; then
+if [ -n "$DOMAIN" ]; then
+  NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
+
+  if [ ! -f "$NGINX_CONF" ]; then
+    info "Creating nginx config for $DOMAIN → 127.0.0.1:$APP_PORT..."
+    cat > "$NGINX_CONF" <<EOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location / {
+        proxy_pass http://127.0.0.1:$APP_PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+    ln -sf "$NGINX_CONF" "/etc/nginx/sites-enabled/$DOMAIN"
+    ok "Nginx config created"
+  fi
+
   nginx -t && systemctl reload nginx && ok "Nginx reloaded"
+fi
+
+# --- ssl (certbot) ---
+if [ -n "$DOMAIN" ] && command -v certbot >/dev/null 2>&1; then
+  if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    info "Obtaining SSL certificate for $DOMAIN..."
+    certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "admin@$DOMAIN" \
+      && ok "SSL certificate obtained" \
+      || warn "certbot failed — run manually: certbot --nginx -d $DOMAIN"
+  else
+    info "SSL certificate already exists for $DOMAIN"
+  fi
+else
+  info "certbot not found — skipping SSL setup"
 fi
 
 # --- notification (optional) ---
