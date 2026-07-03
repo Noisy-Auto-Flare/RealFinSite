@@ -11,7 +11,7 @@ export async function GET() {
   const userAccounts = db.select().from(accounts).where(eq(accounts.userId, userId)).all();
   const accountIds = userAccounts.map((a) => a.id);
 
-  if (accountIds.length === 0) return NextResponse.json([]);
+  if (accountIds.length === 0) return NextResponse.json({ balances: [] });
 
   const allBalances = db.select().from(balances)
     .where(inArray(balances.accountId, accountIds))
@@ -27,5 +27,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json(result);
+  return NextResponse.json({ balances: result });
 }

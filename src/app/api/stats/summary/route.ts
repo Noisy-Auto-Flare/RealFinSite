@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { balances, accounts, transactions } from "@/db/schema";
-import { eq, and, gte, lte, inArray } from "drizzle-orm";
+import { balances, accounts, operations, operationEntries } from "@/db/schema";
+import { eq, and, gte, lte, inArray, sql, lt } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { convertAmount } from "@/lib/rates/coingecko";
 
@@ -53,13 +53,38 @@ export async function GET(request: Request) {
 
   const totalCapital = allBalances.reduce((sum, b) => sum + Math.abs(b.amount), 0);
 
-  // Period income/expense (always returned in original + converted)
-  const conditions = [eq(transactions.userId, userId)];
-  if (periodStart) conditions.push(gte(transactions.operationDate, periodStart));
-  if (periodEnd) conditions.push(lte(transactions.operationDate, periodEnd));
+  const incomeByCurrency = db.select({
+    total: sql`COALESCE(SUM(${operationEntries.amount}), 0)`,
+    currency: operationEntries.currency,
+  }).from(operationEntries)
+    .innerJoin(operations, eq(operations.id, operationEntries.operationId))
+    .where(
+      and(
+        eq(operations.userId, userId),
+        eq(operations.status, "confirmed"),
+        gte(operationEntries.amount, 0),
+        periodStart ? gte(operations.date, periodStart) : undefined,
+        periodEnd ? lte(operations.date, periodEnd) : undefined,
+      )
+    )
+    .groupBy(operationEntries.currency)
+    .all();
 
-  const periodTx = db.select().from(transactions)
-    .where(and(...conditions))
+  const expenseByCurrency = db.select({
+    total: sql`COALESCE(SUM(${operationEntries.amount}), 0)`,
+    currency: operationEntries.currency,
+  }).from(operationEntries)
+    .innerJoin(operations, eq(operations.id, operationEntries.operationId))
+    .where(
+      and(
+        eq(operations.userId, userId),
+        eq(operations.status, "confirmed"),
+        lt(operationEntries.amount, 0),
+        periodStart ? gte(operations.date, periodStart) : undefined,
+        periodEnd ? lte(operations.date, periodEnd) : undefined,
+      )
+    )
+    .groupBy(operationEntries.currency)
     .all();
 
   let income = 0;
@@ -67,18 +92,27 @@ export async function GET(request: Request) {
   let expense = 0;
   let expenseConverted = 0;
 
-  for (const tx of periodTx) {
-    const absAmount = Math.abs(tx.amount);
-    if (tx.type === "income") {
-      income += absAmount;
-      const conv = convertAmount(absAmount, tx.currency, baseCurrency);
-      if (conv) incomeConverted += conv.converted;
-    } else if (tx.type === "expense") {
-      expense += absAmount;
-      const conv = convertAmount(absAmount, tx.currency, baseCurrency);
-      if (conv) expenseConverted += conv.converted;
-    }
+  for (const row of incomeByCurrency) {
+    income += Math.abs(Number(row.total));
+    const conv = convertAmount(Math.abs(Number(row.total)), row.currency, baseCurrency);
+    if (conv) incomeConverted += conv.converted;
   }
+  for (const row of expenseByCurrency) {
+    expense += Math.abs(Number(row.total));
+    const conv = convertAmount(Math.abs(Number(row.total)), row.currency, baseCurrency);
+    if (conv) expenseConverted += conv.converted;
+  }
+
+  const periodTxCount = db.select({ count: sql`COUNT(*)` }).from(operations)
+    .where(
+      and(
+        eq(operations.userId, userId),
+        eq(operations.status, "confirmed"),
+        periodStart ? gte(operations.date, periodStart) : undefined,
+        periodEnd ? lte(operations.date, periodEnd) : undefined,
+      )
+    )
+    .get();
 
   return NextResponse.json({
     totalCapital,
@@ -89,6 +123,6 @@ export async function GET(request: Request) {
     incomeConverted,
     expense,
     expenseConverted,
-    periodTransactionCount: periodTx.length,
+    periodTransactionCount: Number(periodTxCount?.count ?? 0),
   });
 }
