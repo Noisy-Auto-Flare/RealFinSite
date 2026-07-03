@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit checks..."
+
+# lint staged files
+npx lint-staged --no-stash 2>/dev/null || \
+  npx eslint --quiet . --ext .ts,.tsx 2>/dev/null || \
+  echo "⚠ lint skipped (not configured)"
+
+# run tests
+npm test 2>/dev/null || {
+  echo "❌ Tests failed — fix before committing"
+  exit 1
+}

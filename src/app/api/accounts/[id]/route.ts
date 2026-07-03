@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { accounts, balances, accountAddresses } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
+import { logAction } from "@/lib/action-log";
+import { auth } from "@/auth";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
@@ -85,6 +87,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   db.delete(accounts).where(eq(accounts.id, accountId)).run();
+
+  const session = await auth();
+  logAction({
+    userId,
+    username: session?.user?.username || "unknown",
+    action: "delete",
+    entityType: "account",
+    entityId: accountId,
+    details: `${existing.type} "${existing.name}"`,
+  });
 
   return NextResponse.json({ success: true });
 }

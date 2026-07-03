@@ -1,22 +1,27 @@
 import { fetchAndStoreRates } from "@/lib/rates/coingecko";
 import { runScannerCycle } from "./runner";
 
+function logSchedulerEvent(action: string, details: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[scheduler] ${timestamp} ${action}: ${details}`);
+}
+
 export async function runRateUpdate(): Promise<void> {
   try {
     await fetchAndStoreRates();
-    console.log(`[scheduler] Rates updated at ${new Date().toISOString()}`);
+    logSchedulerEvent("Rates updated", "");
   } catch (e) {
-    console.error("[scheduler] Rate update failed:", e);
+    console.error(`[scheduler] ${new Date().toISOString()} Rate update failed:`, e);
   }
 }
 
 export async function runScannerCycleFull(): Promise<void> {
   try {
-    console.log(`[scheduler] Scanner cycle starting at ${new Date().toISOString()}`);
+    logSchedulerEvent("Scanner cycle starting", "");
     await runScannerCycle();
-    console.log(`[scheduler] Scanner cycle done at ${new Date().toISOString()}`);
+    logSchedulerEvent("Scanner cycle done", "");
   } catch (e) {
-    console.error("[scheduler] Scanner cycle failed:", e);
+    console.error(`[scheduler] ${new Date().toISOString()} Scanner cycle failed:`, e);
   }
 }
 
@@ -36,8 +41,8 @@ export function startBackgroundJobs(): void {
       runScannerCycleFull();
     });
 
-    console.log("[scheduler] Background jobs started");
+    logSchedulerEvent("Background jobs started", "");
   } catch (e) {
-    console.warn("[scheduler] node-cron not available, skipping background jobs");
+    console.warn(`[scheduler] ${new Date().toISOString()} node-cron not available, skipping background jobs`);
   }
 }

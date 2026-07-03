@@ -25,20 +25,14 @@ interface Summary {
   expenseConverted: number;
 }
 
-interface Transaction {
+interface OperationSummary {
   id: number;
-  accountId: number;
-  type: string;
-  amount: number;
-  currency: string;
-  category: string | null;
   description: string | null;
+  category: string | null;
+  date: string;
+  source: string;
   status: string;
-  operationDate: string;
-  amountFrom: number | null;
-  currencyFrom: string | null;
-  amountTo: number | null;
-  currencyTo: string | null;
+  entries: { currency: string; amount: number; type: string }[];
 }
 
 const CHART_COLORS = ["#E9B1A3", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"];
@@ -47,7 +41,7 @@ const baseSym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥" };
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [recentTx, setRecentTx] = useState<Transaction[]>([]);
+  const [recentTx, setRecentTx] = useState<OperationSummary[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [baseCurrency, setBaseCurrency] = useState("RUB");
   const [ratesDate, setRatesDate] = useState<string | null>(null);
@@ -68,12 +62,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadSummary(baseCurrency);
-    fetch("/api/transactions?limit=5")
+    fetch("/api/operations?limit=5&page=1")
       .then((r) => r.json())
       .then((data) => {
-        const tx = data.transactions || data;
-        setRecentTx(tx);
-        setPendingCount(tx.filter((t: Transaction) => t.status !== "confirmed").length);
+        const ops = data.operations || [];
+        setRecentTx(ops);
+        setPendingCount(ops.filter((o: OperationSummary) => o.status === "draft").length);
       });
   }, [baseCurrency]);
 
@@ -106,22 +100,6 @@ export default function DashboardPage() {
   function formatAmount(amount: number, currency: string) {
     const sym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥", USDT: "USDT", SOL: "SOL", BNB: "BNB", TON: "TON" };
     return `${amount.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${sym[currency] || currency}`;
-  }
-
-  function getTxIcon(type: string) {
-    switch (type) {
-      case "income": return "📥";
-      case "expense": return "📤";
-      case "transfer": return "🔄";
-      case "exchange": return "💱";
-      default: return "📝";
-    }
-  }
-
-  function getStatusBadge(status: string) {
-    if (status === "confirmed") return <span className="badge badge-confirmed">🟢</span>;
-    if (status === "pending") return <span className="badge badge-pending">🔵</span>;
-    return <span className="badge badge-candidate">🟡</span>;
   }
 
   const sym = (cur: string) => baseSym[cur] || cur;
@@ -255,29 +233,27 @@ export default function DashboardPage() {
         )}
 
         {recentTx.length === 0 ? (
-          <EmptyState icon="📋" title="Нет операций" description="Последние транзакции появятся здесь" />
+          <EmptyState icon="📋" title="Нет операций" description="Последние операции появятся здесь" />
         ) : (
           <div className="space-y-2">
             {recentTx.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0 gap-2 min-w-0">
-                <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                  <span className="shrink-0">{getTxIcon(tx.type)}</span>
-                  <div className="min-w-0 overflow-hidden">
-                    <div className="text-sm truncate">
-                      {tx.type === "exchange"
-                        ? `${tx.amountFrom} ${tx.currencyFrom} → ${tx.amountTo} ${tx.currencyTo}`
-                        : formatAmount(tx.amount, tx.currency)}
-                    </div>
-                    <div className="text-xs text-[var(--text-muted)] truncate">
-                      {tx.category || tx.description || new Date(tx.operationDate).toLocaleDateString("ru-RU")}
+                <div key={tx.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0 gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                    <span className="shrink-0">{tx.entries?.some(e => e.amount > 0) ? "📥" : "📤"}</span>
+                    <div className="min-w-0 overflow-hidden">
+                      <div className="text-sm truncate">
+                        {tx.description || tx.entries?.map(e => formatAmount(e.amount, e.currency)).join(" | ") || "—"}
+                      </div>
+                      <div className="text-xs text-[var(--text-muted)] truncate">
+                        {tx.category || new Date(tx.date).toLocaleDateString("ru-RU")}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {tx.status === "confirmed" ? <span className="badge badge-confirmed">🟢</span> : <span className="badge badge-pending">🔵</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {getStatusBadge(tx.status)}
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>

@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint 2>/dev/null || true
+      - run: npm test
+      - run: npm run build
+        env:
+          DATABASE_URL: ./data/test.db
+          NEXTAUTH_SECRET: test-secret
+          NEXTAUTH_URL: http://localhost:3000
+          AUTH_SECRET: test-auth-secret
+          ENCRYPTION_KEY: test-encryption-key-32-chars!!

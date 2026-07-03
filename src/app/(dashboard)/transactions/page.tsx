@@ -1,26 +1,19 @@
 "use client";
 
-import { useEffect, useState, memo } from "react";
+import { useEffect, useState } from "react";
 import Select from "@/components/Select";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import TransactionRow from "@/components/TransactionRow";
 
-interface Transaction {
+interface OperationSummary {
   id: number;
-  accountId: number;
-  type: string;
-  amount: number;
-  currency: string;
-  amountFrom: number | null;
-  currencyFrom: string | null;
-  amountTo: number | null;
-  currencyTo: string | null;
-  category: string | null;
   description: string | null;
-  status: string;
+  category: string | null;
+  date: string;
   source: string;
-  operationDate: string;
+  status: string;
+  entries: { currency: string; amount: number; type: string }[];
 }
 
 const CATEGORIES = [
@@ -29,55 +22,46 @@ const CATEGORIES = [
   "Вывод с биржи", "Пополнение", "Другое",
 ];
 
-const TYPES = ["", "income", "expense", "transfer", "exchange"];
-const STATUSES = ["", "confirmed", "pending", "matched_candidate"];
-
-const TYPE_LABELS: Record<string, string> = {
-  income: "Доход", expense: "Расход", transfer: "Перевод", exchange: "Обмен",
-};
-
 export default function TransactionsPage() {
   const toast = useToast();
-  const [txs, setTxs] = useState<Transaction[]>([]);
+  const [txs, setTxs] = useState<OperationSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [limit] = useState(20);
   const [page, setPage] = useState(0);
 
-  const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const [editTx, setEditTx] = useState<Transaction | null>(null);
+  const [editTx, setEditTx] = useState<OperationSummary | null>(null);
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setPage(0);
-  }, [filterType, filterStatus, filterCategory, searchQuery]);
+  }, [filterStatus, filterCategory, searchQuery]);
 
   useEffect(() => {
     loadTxs();
-  }, [page, filterType, filterStatus, filterCategory, searchQuery]);
+  }, [page, filterStatus, filterCategory, searchQuery]);
 
   function loadTxs() {
     setLoading(true);
     const params = new URLSearchParams();
     params.set("limit", String(limit));
-    params.set("offset", String(page * limit));
-    if (filterType) params.set("type", filterType);
+    params.set("page", String(page + 1));
     if (filterStatus) params.set("status", filterStatus);
     if (filterCategory) params.set("category", filterCategory);
     if (searchQuery) params.set("search", searchQuery);
 
-    fetch(`/api/transactions?${params.toString()}`)
+    fetch(`/api/operations?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        setTxs(data.transactions);
-        setTotal(data.total);
+        setTxs(data.operations || []);
+        setTotal(data.total || 0);
         setLoading(false);
       });
   }
@@ -87,35 +71,9 @@ export default function TransactionsPage() {
     return `${amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym[currency] || currency}`;
   }
 
-  function getTxTypeDisplay(tx: Transaction) {
-    if (tx.type === "exchange") {
-      return `${tx.amountFrom} ${tx.currencyFrom} → ${tx.amountTo} ${tx.currencyTo}`;
-    }
-    return formatAmount(tx.amount, tx.currency);
-  }
-
-  function getTypeIcon(type: string) {
-    switch (type) {
-      case "income": return "📥";
-      case "expense": return "📤";
-      case "transfer": return "🔄";
-      case "exchange": return "💱";
-      default: return "📝";
-    }
-  }
-
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case "confirmed": return <span className="badge badge-confirmed">✅</span>;
-      case "pending": return <span className="badge badge-pending">🔵</span>;
-      case "matched_candidate": return <span className="badge badge-candidate">🟡</span>;
-      default: return <span className="badge badge-pending">{status}</span>;
-    }
-  }
-
   const totalPages = Math.ceil(total / limit);
 
-  function openEdit(tx: Transaction) {
+  function openEdit(tx: OperationSummary) {
     setEditTx(tx);
     setEditCategory(tx.category || "");
     setEditDescription(tx.description || "");
@@ -124,7 +82,7 @@ export default function TransactionsPage() {
   async function saveEdit() {
     if (!editTx) return;
     setSaving(true);
-    const res = await fetch(`/api/transactions/${editTx.id}`, {
+    const res = await fetch(`/api/operations/${editTx.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ category: editCategory, description: editDescription }),
@@ -141,7 +99,7 @@ export default function TransactionsPage() {
 
   async function deleteTx(id: number) {
     if (!confirm("Удалить эту операцию?")) return;
-    const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/operations/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Операция удалена");
     } else {
@@ -154,9 +112,7 @@ export default function TransactionsPage() {
     <div className="space-y-6 max-w-6xl">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">История операций</h1>
-        <a href="/api/transactions/export" className="btn btn-secondary text-sm shrink-0">
-          📥 CSV
-        </a>
+        
       </div>
 
       {/* Mobile: toggle filter button */}
@@ -169,18 +125,10 @@ export default function TransactionsPage() {
 
       {/* Filters + Search */}
       <div className={`${showFilters ? "flex" : "hidden"} md:flex gap-3 items-center flex-wrap`}>
-        <Select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-auto min-w-[130px]">
-          <option value="">Все типы</option>
-          {TYPES.filter(Boolean).map((t) => (
-            <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
-          ))}
-        </Select>
-
         <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-auto min-w-[130px]">
           <option value="">Все статусы</option>
           <option value="confirmed">Подтверждённые</option>
-          <option value="pending">Новые</option>
-          <option value="matched_candidate">Кандидаты</option>
+          <option value="pending">Черновики</option>
         </Select>
 
         <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-auto min-w-[150px]">
@@ -249,8 +197,8 @@ export default function TransactionsPage() {
             </div>
 
             <div className="text-sm text-[var(--text-secondary)] space-y-1">
-              <p>{getTypeIcon(editTx.type)} {TYPE_LABELS[editTx.type] || editTx.type}</p>
-              <p className="font-mono">{getTxTypeDisplay(editTx)}</p>
+              <p>{editTx.entries?.some(e => e.amount > 0) ? "📥" : "📤"} Операция</p>
+              <p className="font-mono">{editTx.entries?.map(e => formatAmount(e.amount, e.currency)).join(" | ") || "—"}</p>
             </div>
 
             <div>
