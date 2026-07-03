@@ -12,9 +12,9 @@ err()   { echo -e "${RED}[ERR]${NC}   $*" >&2; exit 1; }
 DEPLOY_LOG="/var/log/fintracker-deploy.log"
 exec > >(tee -a "$DEPLOY_LOG") 2>&1
 
-command -v docker       >/dev/null 2>&1 || err "docker not found"
-command -v docker compose >/dev/null 2>&1 || err "docker compose not found"
-command -v nginx        >/dev/null 2>&1 || err "nginx not found"
+command -v docker          >/dev/null 2>&1 || err "docker not found"
+command -v docker compose  >/dev/null 2>&1 || err "docker compose not found"
+command -v nginx           >/dev/null 2>&1 || err "nginx not found"
 
 info "Starting deploy at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
@@ -41,12 +41,17 @@ CURRENT_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep fintrac
 if [ -n "$CURRENT_IMAGE" ]; then
   docker tag "$CURRENT_IMAGE" fintracker-fintracker:rollback 2>/dev/null || true
   ok "Tagged current image fintracker-fintracker:rollback"
+else
+  warn "No existing fintracker image found — rollback will not be available"
 fi
 
 # --- git pull ---
 info "Pulling latest code..."
 cd "${PROJ_PATH:-.}"
 git pull origin main || warn "git pull failed, continuing with local code"
+
+# git pull strips the executable bit; restore it
+chmod +x "$0" 2>/dev/null || true
 
 # --- build ---
 info "Building Docker image..."
@@ -59,18 +64,17 @@ docker compose down --timeout 30 || true
 docker compose up -d
 
 # --- healthcheck ---
-info "Waiting for container to be healthy..."
-for i in $(seq 1 30); do
-  if docker inspect --format='{{.State.Health.Status}}' fintracker 2>/dev/null | grep -q healthy; then
-    ok "Container is healthy"
-    break
-  fi
-  if [ "$i" -eq 30 ]; then
-    err "Container failed healthcheck — rolling back"
+MAX_WAIT=300
+HEALTH_START=$(date +%s)
+info "Waiting for container to be healthy (up to ${MAX_WAIT}s)..."
+while true; do
+  ELAPSED=$(($(date +%s) - HEALTH_START))
+  if [ $ELAPSED -ge $MAX_WAIT ]; then
+    echo ""
+    warn "Container not healthy after ${MAX_WAIT}s — rolling back"
 
-    # Rollback to previous image
+    docker compose down --timeout 10 || true
     if docker image inspect fintracker-fintracker:rollback >/dev/null 2>&1; then
-      info "Rolling back to previous image..."
       docker tag fintracker-fintracker:rollback fintracker-fintracker:latest
       docker compose up -d
       ok "Rollback completed"
@@ -78,7 +82,6 @@ for i in $(seq 1 30); do
       warn "No rollback image found — manual intervention required"
     fi
 
-    # Restore previous docker-compose.yml
     if [ -f "docker-compose.yml.bak" ]; then
       cp docker-compose.yml.bak docker-compose.yml
       warn "Restored docker-compose.yml.bak"
@@ -86,6 +89,25 @@ for i in $(seq 1 30); do
 
     exit 1
   fi
+
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' fintracker 2>/dev/null || echo "missing")
+  if [ "$STATUS" = "healthy" ]; then
+    ok "Container is healthy after ${ELAPSED}s"
+    break
+  fi
+
+  if [ $((ELAPSED % 15)) -eq 0 ] && [ "$STATUS" != "missing" ]; then
+    printf "\r  [%ds] health status: %-10s" "$ELAPSED" "$STATUS"
+  fi
+
+  if [ "$STATUS" = "missing" ]; then
+    EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' fintracker 2>/dev/null || echo "-1")
+    if [ "$EXIT_CODE" != "0" ] && [ "$EXIT_CODE" != "-1" ]; then
+      echo ""
+      err "Container exited with code $EXIT_CODE — check 'docker logs fintracker'"
+    fi
+  fi
+
   sleep 2
 done
 
@@ -97,7 +119,7 @@ docker exec fintracker node /app/server.js --migrate 2>/dev/null || \
 
 # --- nginx ---
 NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
-if [ -f "$NGINX_CONF" ]; then
+if [ -n "$DOMAIN" ] && [ -f "$NGINX_CONF" ]; then
   nginx -t && systemctl reload nginx && ok "Nginx reloaded"
 fi
 
