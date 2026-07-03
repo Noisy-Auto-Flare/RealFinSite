@@ -32,3 +32,7 @@ logs/
 
 # Test coverage
 coverage/
+
+# Temp / dev artifacts
+dev-*.txt
+.superpowers/

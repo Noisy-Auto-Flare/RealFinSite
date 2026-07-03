@@ -18,12 +18,29 @@ command -v nginx        >/dev/null 2>&1 || err "nginx not found"
 
 info "Starting deploy at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
+DOMAIN="${1:-}"
+if [ -z "$DOMAIN" ]; then
+  read -rp "Enter domain name (leave empty to skip nginx): " DOMAIN
+fi
+
 # --- backup database before deploy ---
 BACKUP_DIR="${PROJ_PATH:-.}/backups"
 mkdir -p "$BACKUP_DIR"
 if [ -f "${PROJ_PATH:-.}/data/finance.db" ]; then
   cp "${PROJ_PATH:-.}/data/finance.db" "$BACKUP_DIR/pre-deploy-$(date +%Y%m%d_%H%M%S).db"
   ok "Database backed up"
+fi
+
+# --- save current compose + image for rollback ---
+if [ -f "docker-compose.yml" ]; then
+  cp docker-compose.yml docker-compose.yml.bak
+  ok "Saved docker-compose.yml.bak for rollback"
+fi
+
+CURRENT_IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep fintracker | head -1) || true
+if [ -n "$CURRENT_IMAGE" ]; then
+  docker tag "$CURRENT_IMAGE" fintracker-fintracker:rollback 2>/dev/null || true
+  ok "Tagged current image fintracker-fintracker:rollback"
 fi
 
 # --- git pull ---
@@ -50,22 +67,49 @@ for i in $(seq 1 30); do
   fi
   if [ "$i" -eq 30 ]; then
     err "Container failed healthcheck — rolling back"
-    docker compose down
-    docker compose -f docker-compose.yml.bak up -d 2>/dev/null || warn "Rollback failed — manual intervention required"
+
+    # Rollback to previous image
+    if docker image inspect fintracker-fintracker:rollback >/dev/null 2>&1; then
+      info "Rolling back to previous image..."
+      docker tag fintracker-fintracker:rollback fintracker-fintracker:latest
+      docker compose up -d
+      ok "Rollback completed"
+    else
+      warn "No rollback image found — manual intervention required"
+    fi
+
+    # Restore previous docker-compose.yml
+    if [ -f "docker-compose.yml.bak" ]; then
+      cp docker-compose.yml.bak docker-compose.yml
+      warn "Restored docker-compose.yml.bak"
+    fi
+
+    exit 1
   fi
   sleep 2
 done
 
 # --- run migrations inside container ---
 info "Running database migrations..."
-docker exec fintracker node .next/standalone/server.js --migrate 2>/dev/null || \
+docker exec fintracker node /app/server.js --migrate 2>/dev/null || \
   docker exec fintracker sh -c "cd /app && node -e 'require(\"./server.js\")'" 2>/dev/null || \
-  warn "Migration command failed — run manually: docker exec fintracker node server.js --migrate"
+  warn "Migration command failed — run manually: docker exec fintracker node /app/server.js --migrate"
 
 # --- nginx ---
 NGINX_CONF="/etc/nginx/sites-available/$DOMAIN"
 if [ -f "$NGINX_CONF" ]; then
   nginx -t && systemctl reload nginx && ok "Nginx reloaded"
+fi
+
+# --- notification (optional) ---
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
+if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+  MESSAGE="Deploy successful: fintracker on ${DOMAIN:-no-domain}
+$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+    -d "chat_id=$TELEGRAM_CHAT_ID" \
+    -d "text=$MESSAGE" >/dev/null 2>&1 && ok "Telegram notification sent" || warn "Telegram notification failed"
 fi
 
 info "Deploy complete at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
