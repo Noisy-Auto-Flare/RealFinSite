@@ -34,6 +34,7 @@ html {
 
 body {
   background-color: #0f0f13;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   background-image:
     radial-gradient(at 71.12151183488437% 54.49010901662934%, hsla(60, 3.571428571428607%, 89.01960784313725%, 1) 0%, hsla(60, 3.571428571428607%, 89.01960784313725%, 0) 100%),
     radial-gradient(at 25.77102254986128% 26.097334705255037%, hsla(210, 19.999999999999993%, 82.35294117647058%, 1) 0%, hsla(210, 19.999999999999993%, 82.35294117647058%, 0) 100%),
@@ -476,7 +477,7 @@ button {
 }
 
 /* ---- Responsive helpers ---- */
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   main {
     padding: calc(56px + 1rem) 1rem 1rem !important;
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)) !important;

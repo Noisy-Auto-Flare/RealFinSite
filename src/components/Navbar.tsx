@@ -132,12 +132,12 @@ export default function Navbar({ role, username }: NavbarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 z-80 flex-col p-4 gap-1 bg-[rgba(15,15,19,0.92)] backdrop-blur-[20px] border-r border-[rgba(255,255,255,0.06)]">
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 z-80 flex-col p-4 gap-1 bg-[rgba(15,15,19,0.92)] backdrop-blur-[20px] border-r border-[rgba(255,255,255,0.06)]">
         {sidebarContent()}
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-80 flex items-center justify-between px-4 bg-[rgba(15,15,19,0.85)] backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.06)]">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-80 flex items-center justify-between px-4 bg-[rgba(15,15,19,0.85)] backdrop-blur-[16px] border-b border-[rgba(255,255,255,0.06)]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setDrawerOpen(true)}
@@ -162,7 +162,7 @@ export default function Navbar({ role, username }: NavbarProps) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="bottom-nav md:hidden">
+      <nav className="bottom-nav lg:hidden">
         {navItems.map((item) => (
           <Link
             key={item.href}
@@ -178,7 +178,7 @@ export default function Navbar({ role, username }: NavbarProps) {
       {/* Mobile FAB */}
       <button
         onClick={() => setShowNewTx(true)}
-        className={`fab md:hidden ${showFab ? "visible" : ""} ${showFab && !pulsedRef.current ? "pulse" : ""}`}
+        className={`fab lg:hidden ${showFab ? "visible" : ""} ${showFab && !pulsedRef.current ? "pulse" : ""}`}
         aria-label="Новая операция"
       >
         +
@@ -186,12 +186,12 @@ export default function Navbar({ role, username }: NavbarProps) {
 
       {/* Mobile drawer overlay */}
       <div
-        className={`drawer-overlay md:hidden ${drawerOpen ? "open" : ""}`}
+        className={`drawer-overlay lg:hidden ${drawerOpen ? "open" : ""}`}
         onClick={() => setDrawerOpen(false)}
       />
 
       {/* Mobile drawer panel */}
-      <div className={`drawer-panel md:hidden ${drawerOpen ? "open" : ""}`}>
+      <div className={`drawer-panel lg:hidden ${drawerOpen ? "open" : ""}`}>
         {sidebarContent(() => setDrawerOpen(false))}
       </div>
 
