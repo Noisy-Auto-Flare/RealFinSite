@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { db } from "@/db";
-import { apiCredentials, balances } from "@/db/schema";
+import { apiCredentials, transactions, balances } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/crypto";
 

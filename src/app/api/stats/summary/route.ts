@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { balances, accounts } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { balances, accounts, transactions } from "@/db/schema";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { convertAmount } from "@/lib/rates/coingecko";
 
@@ -11,6 +11,8 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const baseCurrency = (searchParams.get("base_currency") || "RUB").toUpperCase();
+  const periodStart = searchParams.get("period_start");
+  const periodEnd = searchParams.get("period_end");
 
   const userAccounts = db.select().from(accounts).where(eq(accounts.userId, userId)).all();
   const accountIds = userAccounts.map((a) => a.id);
@@ -51,12 +53,32 @@ export async function GET(request: Request) {
 
   const totalCapital = allBalances.reduce((sum, b) => sum + Math.abs(b.amount), 0);
 
-  // Period income/expense — stubbed until operations migration
-  const income = 0;
-  const incomeConverted = 0;
-  const expense = 0;
-  const expenseConverted = 0;
-  const periodTransactionCount = 0;
+  // Period income/expense (always returned in original + converted)
+  const conditions = [eq(transactions.userId, userId)];
+  if (periodStart) conditions.push(gte(transactions.operationDate, periodStart));
+  if (periodEnd) conditions.push(lte(transactions.operationDate, periodEnd));
+
+  const periodTx = db.select().from(transactions)
+    .where(and(...conditions))
+    .all();
+
+  let income = 0;
+  let incomeConverted = 0;
+  let expense = 0;
+  let expenseConverted = 0;
+
+  for (const tx of periodTx) {
+    const absAmount = Math.abs(tx.amount);
+    if (tx.type === "income") {
+      income += absAmount;
+      const conv = convertAmount(absAmount, tx.currency, baseCurrency);
+      if (conv) incomeConverted += conv.converted;
+    } else if (tx.type === "expense") {
+      expense += absAmount;
+      const conv = convertAmount(absAmount, tx.currency, baseCurrency);
+      if (conv) expenseConverted += conv.converted;
+    }
+  }
 
   return NextResponse.json({
     totalCapital,
@@ -67,6 +89,6 @@ export async function GET(request: Request) {
     incomeConverted,
     expense,
     expenseConverted,
-    periodTransactionCount,
+    periodTransactionCount: periodTx.length,
   });
 }
