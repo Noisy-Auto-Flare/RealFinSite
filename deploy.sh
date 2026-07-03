@@ -31,6 +31,14 @@ fi
 
 if [ -n "$DOMAIN" ]; then
   command -v nginx >/dev/null 2>&1 || err "nginx not found — apt install nginx"
+  # auto-set NEXTAUTH_URL for Auth.js host validation
+  if grep -q "^NEXTAUTH_URL=" .env 2>/dev/null; then
+    sed -i "s|^NEXTAUTH_URL=.*|NEXTAUTH_URL=https://$DOMAIN|" .env
+    info "Updated NEXTAUTH_URL to https://$DOMAIN in .env"
+  else
+    echo "NEXTAUTH_URL=https://$DOMAIN" >> .env
+    info "Set NEXTAUTH_URL=https://$DOMAIN in .env"
+  fi
 fi
 
 # --- backup database before deploy ---
