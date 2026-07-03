@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { initializeApp } from "@/lib/init";
 
 const startTime = Date.now();
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  initializeApp();
   const dbPath = process.env.DATABASE_URL || "./data/fintracker.db";
   let dbOk = false;
   let dbSize = 0;
