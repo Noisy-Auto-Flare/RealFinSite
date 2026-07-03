@@ -13,13 +13,13 @@ const sqlite = new Database(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-function hasColumn(table: string, column: string): boolean {
+function hasColumn(sqlite: Database, table: string, column: string): boolean {
   const cols = sqlite.pragma(`table_info(${table})`) as { name: string }[];
   return cols.some((c) => c.name === column);
 }
 
 function addColumn(table: string, column: string, definition: string): void {
-  if (hasColumn(table, column)) {
+  if (hasColumn(sqlite, table, column)) {
     console.log(`  ✔ ${table}.${column} already exists`);
     return;
   }
@@ -130,7 +130,7 @@ function migrateToMultiLeg(sqlite: Database): void {
 }
 
 function updateBalances(sqlite: Database): void {
-  if (hasColumn("balances", "updated_at")) {
+  if (hasColumn(sqlite, "balances", "updated_at")) {
     console.log("  ⚠ balances.updated_at column is deprecated and will be removed in a future version");
   }
 }
