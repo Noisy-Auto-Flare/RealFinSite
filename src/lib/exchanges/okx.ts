@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { db } from "@/db";
-import { apiCredentials, transactions, balances } from "@/db/schema";
+import { apiCredentials, operations, operationEntries, balances } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/crypto";
 
@@ -202,33 +202,13 @@ export async function fetchBills(
   }
 }
 
-const BILL_TYPE_MAP: Record<string, string> = {
-  "1": "exchange",
-  "2": "expense",
-  "3": "income",
-  "4": "expense",
-  "6": "income",
-  "7": "expense",
-  "12": "expense",
-  "13": "income",
-  "14": "income",
-  "15": "expense",
-  "16": "exchange",
-  "17": "income",
-  "68": "exchange",
-};
-
-function mapBillType(subType: string): string {
-  return BILL_TYPE_MAP[subType] || "income";
-}
-
-export async function syncAccount(accountId: number, userId: number): Promise<{ balances: number; transactions: number }> {
+export async function syncAccount(accountId: number, userId: number): Promise<{ balances: number; operations: number }> {
   const creds = getDecryptedCredentials(accountId);
   if (!creds) throw new Error("No credentials found for this account");
   if (!creds.passphrase) throw new Error("OKX requires a passphrase");
 
   let balanceCount = 0;
-  let txCount = 0;
+  let opCount = 0;
 
   // 1. Sync balances
   const okxBalances = await fetchBalances(creds.apiKey, creds.apiSecret, creds.passphrase);
@@ -242,7 +222,7 @@ export async function syncAccount(accountId: number, userId: number): Promise<{ 
 
     if (existing) {
       db.update(balances)
-        .set({ amount, updatedAt: new Date().toISOString() })
+        .set({ amount })
         .where(eq(balances.id, existing.id))
         .run();
     } else {
@@ -257,45 +237,63 @@ export async function syncAccount(accountId: number, userId: number): Promise<{ 
   const deposits = await fetchDeposits(creds.apiKey, creds.apiSecret, creds.passphrase, sevenDaysAgo);
   for (const d of deposits) {
     if (d.state !== "2") continue;
-    const existing = db.select().from(transactions)
-      .where(eq(transactions.externalId, d.txId))
-      .get();
+    const existing = db.select({ id: operations.id }).from(operations)
+      .where(eq(operations.txHash, d.txId)).get();
     if (existing) continue;
 
     const amount = parseFloat(d.amt);
     if (amount <= 0) continue;
 
-    db.insert(transactions).values({
-      userId, accountId,
-      type: "income", status: "confirmed", source: "api_okx",
-      amount, currency: d.ccy,
-      externalId: d.txId,
-      operationDate: new Date(parseInt(d.ts)).toISOString(),
+    const op = db.insert(operations).values({
+      userId,
       description: "OKX Deposit",
+      date: new Date(parseInt(d.ts)).toISOString().split("T")[0],
+      source: "api_okx",
+      txHash: d.txId,
+      status: "confirmed",
+    }).returning().get();
+
+    db.insert(operationEntries).values({
+      operationId: op.id,
+      accountId,
+      currency: d.ccy,
+      amount: Math.abs(amount),
+      type: "principal",
+      isVerified: 1,
     }).run();
-    txCount++;
+
+    opCount++;
   }
 
   const withdrawals = await fetchWithdrawals(creds.apiKey, creds.apiSecret, creds.passphrase, sevenDaysAgo);
   for (const w of withdrawals) {
     if (w.state !== "3") continue;
-    const existing = db.select().from(transactions)
-      .where(eq(transactions.externalId, w.txId))
-      .get();
+    const existing = db.select({ id: operations.id }).from(operations)
+      .where(eq(operations.txHash, w.txId)).get();
     if (existing) continue;
 
     const amount = parseFloat(w.amt);
     if (amount <= 0) continue;
 
-    db.insert(transactions).values({
-      userId, accountId,
-      type: "expense", status: "confirmed", source: "api_okx",
-      amount, currency: w.ccy,
-      externalId: w.txId,
-      operationDate: new Date(parseInt(w.ts)).toISOString(),
+    const op = db.insert(operations).values({
+      userId,
       description: "OKX Withdrawal",
+      date: new Date(parseInt(w.ts)).toISOString().split("T")[0],
+      source: "api_okx",
+      txHash: w.txId,
+      status: "confirmed",
+    }).returning().get();
+
+    db.insert(operationEntries).values({
+      operationId: op.id,
+      accountId,
+      currency: w.ccy,
+      amount: -Math.abs(amount),
+      type: "principal",
+      isVerified: 1,
     }).run();
-    txCount++;
+
+    opCount++;
   }
 
   // 3. Update last sync time
@@ -304,5 +302,5 @@ export async function syncAccount(accountId: number, userId: number): Promise<{ 
     .where(eq(apiCredentials.accountId, accountId))
     .run();
 
-  return { balances: balanceCount, transactions: txCount };
+  return { balances: balanceCount, operations: opCount };
 }

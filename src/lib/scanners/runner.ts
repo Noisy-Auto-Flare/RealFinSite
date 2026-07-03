@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { accountAddresses, accounts, transactions, balances } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { accountAddresses, accounts, operations, operationEntries } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
 
 const NATIVE_SYMBOLS: Record<string, string> = {
@@ -49,10 +49,8 @@ async function processEvent(
   accountId: number,
   userId: number
 ): Promise<void> {
-  const existing = db.select().from(transactions)
-    .where(eq(transactions.txHash, evt.txHash))
-    .get();
-
+  const existing = db.select({ id: operations.id }).from(operations)
+    .where(eq(operations.txHash, evt.txHash)).get();
   if (existing) return;
 
   const nativeSymbol = NATIVE_SYMBOLS[network] || "ETH";
@@ -66,41 +64,28 @@ async function processEvent(
 
   if (!isIncoming && !isOutgoing) return;
 
-  const type = isIncoming ? "income" : "expense";
+  const amount = isIncoming ? humanAmount : -humanAmount;
 
-  db.insert(transactions).values({
+  const op = db.insert(operations).values({
     userId,
-    accountId,
-    type,
-    status: "confirmed",
+    description: `${isIncoming ? "Received" : "Sent"} ${currency}`,
+    date: new Date(evt.timestamp * 1000).toISOString().split("T")[0],
     source: `scanner_${network}`,
-    amount: humanAmount,
-    currency,
     txHash: evt.txHash,
     fromAddress: evt.fromAddress,
     toAddress: evt.toAddress,
     blockTimestamp: evt.timestamp,
-    operationDate: new Date(evt.timestamp * 1000).toISOString(),
+    status: "draft",
+  }).returning().get();
+
+  db.insert(operationEntries).values({
+    operationId: op.id,
+    accountId,
+    currency,
+    amount,
+    type: "principal",
+    isVerified: 1,
   }).run();
-
-  if (isIncoming) {
-    upsertBalance(accountId, currency, humanAmount);
-  } else {
-    upsertBalance(accountId, currency, -humanAmount);
-  }
 }
 
-function upsertBalance(accountId: number, currency: string, amountDelta: number): void {
-  const existing = db.select().from(balances).where(
-    and(eq(balances.accountId, accountId), eq(balances.currency, currency))
-  ).get();
 
-  if (existing) {
-    db.update(balances)
-      .set({ amount: existing.amount + amountDelta, updatedAt: new Date().toISOString() })
-      .where(eq(balances.id, existing.id))
-      .run();
-  } else {
-    db.insert(balances).values({ accountId, currency, amount: amountDelta }).run();
-  }
-}
