@@ -61,7 +61,7 @@ async function fetchEvmTokenMetadata(
     const result = data.result;
     const meta: TokenMetadata = {
       chain,
-      contractAddress: contractAddress.toLowerCase(),
+      contractAddress,
       symbol: result.symbol || "",
       name: result.name,
       decimals: parseInt(result.decimals, 10) || 18,
@@ -99,7 +99,7 @@ async function fetchSolanaTokenMetadata(
 
     const meta: TokenMetadata = {
       chain: "solana",
-      contractAddress: contractAddress.toLowerCase(),
+      contractAddress,
       symbol: item.symbol,
       name: item.name,
       decimals: item.decimals ?? 9,
