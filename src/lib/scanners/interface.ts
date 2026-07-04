@@ -37,14 +37,15 @@ export interface IScanner {
   fetchAllBalances(address: string): Promise<AllBalancesResult | null>;
 }
 
+import { EVM_NETWORKS } from "./evm/config";
+
 export async function getScanner(network: string): Promise<IScanner | null> {
+  if (EVM_NETWORKS[network]) {
+    const { EvmScanner } = await import("./evm/scanner");
+    return new EvmScanner(network);
+  }
+
   switch (network) {
-    case "bsc":
-    case "avalanche":
-    case "ethereum": {
-      const { EvmScanner } = await import("./evm/scanner");
-      return new EvmScanner(network);
-    }
     case "solana": {
       const { SolanaScanner } = await import("./solana");
       return new SolanaScanner();
