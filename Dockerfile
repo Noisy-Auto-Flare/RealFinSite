@@ -28,7 +28,8 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-RUN apk add --no-cache curl && \
+RUN apk add --no-cache curl python3 py3-pip && \
+    pip3 install --break-system-packages beancount fava supervisor && \
     mkdir -p /data /logs /backups && \
     chown nextjs:nodejs /data /logs /backups
 
@@ -36,12 +37,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY supervisord.conf /app/supervisord.conf
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 3000 5000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
-CMD ["node", "server.js"]
+CMD ["supervisord", "-c", "/app/supervisord.conf"]
