@@ -4,9 +4,18 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 
 const SUPPORTED_NETWORKS = [
-  { id: "bsc", label: "BSC (BscScan)", placeholder: "BscScan API Key" },
-  { id: "avalanche", label: "Avalanche (SnowTrace)", placeholder: "SnowTrace API Key" },
   { id: "ethereum", label: "Ethereum (EtherScan)", placeholder: "EtherScan API Key" },
+  { id: "bsc", label: "BSC (BscScan)", placeholder: "BscScan API Key" },
+  { id: "polygon", label: "Polygon (PolygonScan)", placeholder: "PolygonScan API Key" },
+  { id: "avalanche", label: "Avalanche (SnowTrace)", placeholder: "SnowTrace API Key" },
+  { id: "arbitrum", label: "Arbitrum (ArbiScan)", placeholder: "ArbiScan API Key" },
+  { id: "optimism", label: "Optimism (EtherScan)", placeholder: "Optimism API Key" },
+  { id: "base", label: "Base (BaseScan)", placeholder: "BaseScan API Key" },
+  { id: "fantom", label: "Fantom (FTMScan)", placeholder: "FTMScan API Key" },
+  { id: "cronos", label: "Cronos (CronosScan)", placeholder: "CronosScan API Key" },
+  { id: "aurora", label: "Aurora (AuroraScan)", placeholder: "AuroraScan API Key" },
+  { id: "moonbeam", label: "Moonbeam (MoonScan)", placeholder: "MoonScan API Key" },
+  { id: "gnosis", label: "Gnosis (Gnosisscan)", placeholder: "Gnosisscan API Key" },
   { id: "solana", label: "Solana (Helius)", placeholder: "Helius API Key" },
   { id: "ton", label: "TON (Toncenter)", placeholder: "Toncenter API Key" },
 ];

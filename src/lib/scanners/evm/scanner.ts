@@ -116,39 +116,50 @@ export class EvmScanner implements IScanner {
 
   async fetchNativeBalance(address: string): Promise<NativeBalanceResult | null> {
     const apiKey = this.getApiKey();
+    const tag = `[evm.${this.network}.fetchNativeBalance]`;
 
     try {
       const balanceRes = await fetch(
         `${this.config.apiUrl}?module=account&action=balance&address=${address}&apikey=${apiKey}`,
         { signal: AbortSignal.timeout(15000) }
       );
-      if (!balanceRes.ok) return null;
+      if (!balanceRes.ok) { console.log(`${tag} balance HTTP ${balanceRes.status}`); return null; }
       const balanceData: { status: string; result: string } = await balanceRes.json();
-      if (balanceData.status !== "1") return null;
+      if (balanceData.status !== "1") { console.log(`${tag} balance API status=${balanceData.status}`); return null; }
 
       const blockRes = await fetch(
         `${this.config.apiUrl}?module=proxy&action=eth_blockNumber&apikey=${apiKey}`,
         { signal: AbortSignal.timeout(15000) }
       );
-      if (!blockRes.ok) return null;
-      const blockData: { result: string } = await blockRes.json();
+      let blockNumber = 0;
+      if (blockRes.ok) {
+        const blockData: { result: string } = await blockRes.json();
+        blockNumber = parseInt(blockData.result, 16) || 0;
+      } else {
+        console.log(`${tag} blockNumber HTTP ${blockRes.status}, using 0`);
+      }
 
+      console.log(`${tag} balance=${balanceData.result}, block=${blockNumber}`);
       return {
         balance: balanceData.result,
         decimals: this.config.nativeDecimals,
-        blockNumber: parseInt(blockData.result, 16),
+        blockNumber,
       };
     } catch {
+      console.log(`${tag} exception`);
       return null;
     }
   }
 
   async fetchAllBalances(address: string): Promise<AllBalancesResult | null> {
+    const tag = `[evm.${this.network}.fetchAllBalances]`;
     const native = await this.fetchNativeBalance(address);
-    if (!native) return null;
-    return {
+    if (!native) { console.log(`${tag} native balance failed, returning null`); return null; }
+    const result: AllBalancesResult = {
       balances: [{ currency: this.config.nativeSymbol, balance: native.balance, decimals: native.decimals }],
       blockNumber: native.blockNumber,
     };
+    console.log(`${tag} ${this.config.nativeSymbol}: ${parseInt(native.balance) / 10 ** native.decimals}`);
+    return result;
   }
 }
