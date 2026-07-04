@@ -3,6 +3,7 @@
 import { useEffect, useState, memo } from "react";
 import Select from "@/components/Select";
 import { useToast } from "@/components/Toast";
+import { ENTRY_TYPES, ENTRY_TYPE_HINTS } from "@/lib/operation-types";
 
 interface Props {
   onClose: () => void;
@@ -23,16 +24,7 @@ interface Entry {
 }
 
 const CURRENCIES = ["RUB", "USD", "USDT", "CNY", "SOL", "BNB", "TON"];
-const ENTRY_TYPES = ["principal", "fee", "discount", "interest", "coupon"] as const;
 const STEPS = ["Основное", "Записи", "Проверка"];
-
-const TYPE_HINTS: Record<string, string> = {
-  principal: "Основное движение средств",
-  fee: "Комиссия сети или банка",
-  discount: "Скидка",
-  interest: "Начисленный процент",
-  coupon: "Купонный доход",
-};
 
 const CATEGORIES = [
   { value: "", label: "Без категории" },
@@ -416,7 +408,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                         <div className="col-span-2">
                           <label className="text-xs text-[var(--text-muted)] block mb-1">
                             Тип
-                            <InfoTip text={TYPE_HINTS[entry.type]} />
+                            <InfoTip text={ENTRY_TYPE_HINTS[entry.type]} />
                           </label>
                           <Select
                             value={entry.type}
@@ -425,8 +417,8 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                             }
                           >
                             {ENTRY_TYPES.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
+                              <option key={t.value} value={t.value}>
+                                {t.label}
                               </option>
                             ))}
                           </Select>

@@ -40,7 +40,13 @@ export async function fetchAndStoreRates(): Promise<void> {
     return;
   }
 
-  const cryptoData: CoinGeckoPriceResponse = await cryptoRes.json();
+  let cryptoData: CoinGeckoPriceResponse;
+  try {
+    cryptoData = await cryptoRes.json();
+  } catch {
+    console.error("CoinGecko crypto fetch: empty or invalid JSON response");
+    return;
+  }
 
   // Store crypto → fiat rates
   for (const [symbol, coinId] of Object.entries(CRYPTO_IDS)) {
@@ -63,7 +69,13 @@ export async function fetchAndStoreRates(): Promise<void> {
   const fiatRes = await fetch(fiatUrl, { headers, next: { revalidate: 300 } });
 
   if (fiatRes.ok) {
-    const fiatData: CoinGeckoPriceResponse = await fiatRes.json();
+    let fiatData: CoinGeckoPriceResponse;
+    try {
+      fiatData = await fiatRes.json();
+    } catch {
+      console.error("CoinGecko fiat fetch: empty or invalid JSON response");
+      fiatData = {};
+    }
     const tether = fiatData["tether"];
     if (tether) {
       if (tether.rub) upsertRate("USD", "RUB", tether.rub);

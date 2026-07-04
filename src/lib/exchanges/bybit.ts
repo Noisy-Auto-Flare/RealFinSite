@@ -66,7 +66,12 @@ async function bybitFetch<T>(
     throw new Error(`Bybit API error ${res.status}: ${text}`);
   }
 
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Bybit API error ${res.status}: empty or invalid JSON response`);
+  }
   if (data.retCode !== 0) {
     throw new Error(`Bybit API error: ${data.retMsg} (code ${data.retCode})`);
   }

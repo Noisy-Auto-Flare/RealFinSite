@@ -39,7 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const allowedFields = ["description", "category", "date", "status"] as const;
   const updates: Record<string, unknown> = {};
 

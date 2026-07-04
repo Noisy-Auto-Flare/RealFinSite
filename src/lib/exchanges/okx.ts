@@ -99,7 +99,12 @@ async function okxFetch<T>(
     throw new Error(`OKX API error ${res.status}: ${text}`);
   }
 
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`OKX API error ${res.status}: empty or invalid JSON response`);
+  }
   if (data.code !== "0") {
     throw new Error(`OKX API error: ${data.msg} (code ${data.code})`);
   }

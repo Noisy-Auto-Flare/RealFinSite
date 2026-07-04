@@ -58,10 +58,13 @@ export default function TransactionsPage() {
     if (searchQuery) params.set("search", searchQuery);
 
     fetch(`/api/operations?${params.toString()}`)
-      .then((r) => r.json())
+      .then((r) => r.json().catch(() => ({ operations: [], total: 0 })))
       .then((data) => {
         setTxs(data.operations || []);
         setTotal(data.total || 0);
+        setLoading(false);
+      })
+      .catch(() => {
         setLoading(false);
       });
   }

@@ -32,7 +32,8 @@ export async function POST(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const { accountId, exchange, apiKey, apiSecret, apiPassphrase } = body;
 
   if (!accountId || !exchange || !apiKey || !apiSecret) {
@@ -83,7 +84,8 @@ export async function DELETE(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const { id } = body;
 
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });

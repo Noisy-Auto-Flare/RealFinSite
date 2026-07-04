@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const { name, type, currency, addresses, initialBalances, exchange, apiKey, apiSecret, apiPassphrase } = body;
 
   if (!name || !type) {

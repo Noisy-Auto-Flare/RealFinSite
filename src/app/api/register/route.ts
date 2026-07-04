@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   const { username, password } = body;
 
   if (!username || !password) {

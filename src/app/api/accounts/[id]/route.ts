@@ -31,7 +31,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const accountId = parseInt(id, 10);
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 
   const existing = db.select().from(accounts).where(
     and(eq(accounts.id, accountId), eq(accounts.userId, userId))
