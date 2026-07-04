@@ -14,6 +14,11 @@ interface Balance {
   amountInBase: number | null;
 }
 
+interface BeancountSummary {
+  totalCapital: number;
+  currency: string;
+}
+
 interface Summary {
   totalCapital: number;
   totalCapitalConverted: number;
@@ -45,6 +50,7 @@ export default function DashboardPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [baseCurrency, setBaseCurrency] = useState("RUB");
   const [ratesDate, setRatesDate] = useState<string | null>(null);
+  const [beancountSummary, setBeancountSummary] = useState<BeancountSummary | null>(null);
 
   useEffect(() => {
     fetch("/api/rates")
@@ -69,6 +75,20 @@ export default function DashboardPage() {
         setRecentTx(ops);
         setPendingCount(ops.filter((o: OperationSummary) => o.status === "draft").length);
       });
+
+    fetch("/api/beancount/balance-sheet")
+      .then(r => r.json())
+      .then(data => {
+        if (data?.totals?.assets) {
+          const assets = parseFloat(data.totals.assets.number) || 0;
+          const liabilities = parseFloat(data.totals.liabilities.number) || 0;
+          setBeancountSummary({
+            totalCapital: assets - liabilities,
+            currency: data.totals.assets.currency || "RUB",
+          });
+        }
+      })
+      .catch(() => {});
   }, [baseCurrency]);
 
   const groupBalancesByAccount = () => {
@@ -155,6 +175,18 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+          {beancountSummary && (
+            <div className="card md:col-span-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[var(--text-secondary)]">Капитал (Beancount)</span>
+                <span className="text-xs text-[var(--text-muted)]">✓ верифицировано</span>
+              </div>
+              <div className="text-2xl font-bold tabular-nums text-[var(--success)]">
+                <AnimatedCounter value={beancountSummary.totalCapital} /> {sym(beancountSummary.currency)}
+              </div>
+            </div>
+          )}
 
         <div className="card md:col-span-2">
           <h2 className="font-medium mb-2">Распределение по валютам</h2>
