@@ -209,6 +209,14 @@ export function recalculateAllBalances(sqlitep?: Database): void {
 export function runMigrations(sqlitep?: Database): void {
   const s = sqlitep ?? sqlite;
 
+  // Unconditionally ensure beancount_cache exists (idempotent)
+  console.log("\n[beancount_cache]");
+  createTable(s, "beancount_cache", `(
+  key TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+)`);
+
   if (getSchemaVersion(s) >= SCHEMA_VERSION) {
     return;
   }
