@@ -1,94 +1,25 @@
-# Task 3: Operations API — CRUD
+# Task 3: Rewrite `evm.ts` into modular `evm/scanner.ts`
 
 **Files:**
-- Create: `src/app/api/operations/route.ts`
-- Create: `src/app/api/operations/[id]/route.ts`
-- Create: `src/app/api/operations/unverified/route.ts`
-- Create: `src/app/api/entries/[id]/verify/route.ts`
-- Delete: `src/app/api/transactions/route.ts`
-- Delete: `src/app/api/transactions/[id]/route.ts`
-- Delete: `src/app/api/transactions/export/route.ts`
-- Delete: `src/app/api/matches/route.ts`
+- Create: `src/lib/scanners/evm/scanner.ts`
+- Delete: `src/lib/scanners/evm.ts`
 
-**Interfaces:**
-- Consumes: `db` from `@/db`, `operations`/`operationEntries` from `@/db/schema`
-- Produces: Full CRUD API for operations with fee auto-detection
+**Acceptance Criteria:**
+1. Create `evm/` directory and `evm/scanner.ts` implementing `IScanner`
+2. EvmScanner uses `EVM_NETWORKS` from `./config` and `getNetworkApiKey` from `../api-keys`
+3. Support both `txlist` and `tokentx` explorer endpoints
+4. Pagination: fetch next page if result >= 10000 items
+5. `fetchNewTransactions` returns sorted events (by timestamp)
+6. `fetchNativeBalance` uses `balance` action + `eth_blockNumber` proxy action
+7. `fetchAllBalances` returns native balance only
+8. Delete old `src/lib/scanners/evm.ts`
+9. `npx tsc --noEmit` passes with no errors
 
-**Important: Import note for `recalculateAllBalances`**
+**Implementation detail:**
+- The old `evm.ts` has a `fetchPage` method; the new scanner should inline pagination in `fetchExplorer` (see plan code)
+- Constructor takes `network: string`, throws if network not in EVM_NETWORKS
+- `getApiKey()` falls back: `process.env[cfg.envKey] || getNetworkApiKey(network) || ""`
+- All explorer calls use `AbortSignal.timeout(15000)`
+- Full code is in the plan — use it verbatim
 
-The `recalculateAllBalances` function in `src/db/migrate.ts` currently takes a `sqlite: Database` parameter. For API routes, it needs to be called without arguments using the module-level sqlite from migrate.ts. **Fix the function signature**: make the parameter optional with a default:
-
-```typescript
-// In migrate.ts, change:
-export function recalculateAllBalances(sqlite: Database) { ... }
-// To:
-export function recalculateAllBalances(sqlite?: Database) {
-  const _sqlite = sqlite || (() => { throw new Error("no sqlite") })();
-  // or better: use module-level sqlite as default
-}
-```
-
-OR better: keep a module-level reference in migrate.ts:
-
-```typescript
-function _recalc() { ... existing code using the sqlite param ... }
-// For API usage:
-export function recalculateAllBalances() { _recalc(moduleSqlite); }
-// For migration:
-export function recalculateAllBalancesFrom(sqlite: Database) { _recalc(sqlite); }
-```
-
-Simplify: just make `recalculateAllBalances` always use the module-level `sqlite` constant at the top of migrate.ts.
-
-## Steps from plan
-
-### Step 1: Create `POST /api/operations`
-
-File: `src/app/api/operations/route.ts`
-- Import from `@/db`, `@/db/schema`, `@/db/migrate`
-- `detectImplicitFees()` utility function
-- `POST` handler: validate entries, insert operation + entries, detect fees, recalculate balances, return
-
-### Step 2: `GET /api/operations` with filtering/pagination
-
-Same file. Query params: page, limit, date_from, date_to, category, status, search
-
-### Step 3: Operation detail, update, delete
-
-File: `src/app/api/operations/[id]/route.ts`
-- GET: single operation with entries
-- PATCH: update description, category, date, status. If status→confirmed, recalculate
-- DELETE: delete operation (cascade handles entries), recalculate balances
-
-### Step 4: Unverified operations
-
-File: `src/app/api/operations/unverified/route.ts`
-- GET: all draft operations with isVerified=0 entries, grouped by operation
-
-### Step 5: Verify entry
-
-File: `src/app/api/entries/[id]/verify/route.ts`
-- PATCH: set isVerified=1 on fee entry, optionally update amount
-- recalculate balances
-
-### Step 6: Remove old API files
-
-Delete:
-- `src/app/api/transactions/route.ts`
-- `src/app/api/transactions/[id]/route.ts`
-- `src/app/api/transactions/export/route.ts`
-- `src/app/api/matches/route.ts`
-
-### Step 7: Build test
-
-Run: `npx vitest run`
-Expected: all tests pass (some old transaction-importing tests may fail — fix them)
-
-### Step 8: Commit
-
-```bash
-git add src/app/api/
-git rm src/app/api/transactions/
-git rm src/app/api/matches/
-git commit -m "feat: operations API with CRUD, fee detection, unverified queue"
-```
+No tests — verify with `npx tsc --noEmit`.

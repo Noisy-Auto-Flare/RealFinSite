@@ -14,6 +14,27 @@ const sqlite = new DatabaseClass(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
+const SCHEMA_VERSION = 2;
+
+function getSchemaVersion(s: Database): number {
+  try {
+    const row = s.prepare("SELECT version FROM _schema_version LIMIT 1").get() as { version: number } | undefined;
+    return row?.version ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+function ensureSchemaVersion(s: Database): void {
+  s.exec("CREATE TABLE IF NOT EXISTS _schema_version (version INTEGER NOT NULL)");
+  const count = (s.prepare("SELECT COUNT(*) as count FROM _schema_version").get() as { count: number }).count;
+  if (count === 0) {
+    s.prepare("INSERT INTO _schema_version (version) VALUES (?)").run(SCHEMA_VERSION);
+  } else {
+    s.prepare("UPDATE _schema_version SET version = ?").run(SCHEMA_VERSION);
+  }
+}
+
 function hasColumn(s: Database, table: string, column: string): boolean {
   try {
     const cols = s.pragma(`table_info(${table})`) as { name: string }[];
@@ -158,27 +179,39 @@ export function recalculateAllBalances(sqlitep?: Database): void {
     console.log("  ✔ balances table does not exist, skipping recalculation");
     return;
   }
-  s.exec("DELETE FROM balances;");
-  s.exec(`
-    INSERT INTO balances (account_id, currency, amount)
-    SELECT
-      oe.account_id,
-      oe.currency,
-      COALESCE(SUM(oe.amount), 0) as amount
-    FROM operation_entries oe
-    JOIN operations o ON oe.operation_id = o.id
-    WHERE o.status = 'confirmed'
-    GROUP BY oe.account_id, oe.currency;
-  `);
-  s.exec(`
-    INSERT OR IGNORE INTO balances (account_id, currency, amount)
-    SELECT a.id, a.currency, 0 FROM accounts a;
-  `);
-  console.log("  ✓ balances recalculated from confirmed entries");
+  s.exec("BEGIN");
+  try {
+    s.exec("DELETE FROM balances;");
+    s.exec(`
+      INSERT INTO balances (account_id, currency, amount)
+      SELECT
+        oe.account_id,
+        oe.currency,
+        COALESCE(SUM(oe.amount), 0) as amount
+      FROM operation_entries oe
+      JOIN operations o ON oe.operation_id = o.id
+      WHERE o.status = 'confirmed'
+      GROUP BY oe.account_id, oe.currency;
+    `);
+    s.exec(`
+      INSERT OR IGNORE INTO balances (account_id, currency, amount)
+      SELECT a.id, a.currency, 0 FROM accounts a;
+    `);
+    s.exec("COMMIT");
+    console.log("  ✓ balances recalculated from confirmed entries");
+  } catch (e) {
+    s.exec("ROLLBACK");
+    console.error("  ✗ balance recalculation failed:", e);
+    throw e;
+  }
 }
 
 export function runMigrations(sqlitep?: Database): void {
   const s = sqlitep ?? sqlite;
+
+  if (getSchemaVersion(s) >= SCHEMA_VERSION) {
+    return;
+  }
 
   // auto-backup before migration
   try {
@@ -330,6 +363,29 @@ export function runMigrations(sqlitep?: Database): void {
   console.log("\n[recalculate balances]");
   recalculateAllBalances(s);
 
+  console.log("\n[blockchain_api_keys]");
+  createTable(s, "blockchain_api_keys", `(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      network TEXT NOT NULL UNIQUE,
+      api_key TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+  console.log("\n[tokens]");
+  createTable(s, "tokens", `(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chain TEXT NOT NULL,
+      contract_address TEXT NOT NULL,
+      symbol TEXT NOT NULL,
+      name TEXT,
+      decimals INTEGER NOT NULL DEFAULT 18,
+      logo_url TEXT,
+      metadata_source TEXT DEFAULT 'explorer',
+      last_metadata_fetch TEXT DEFAULT CURRENT_TIMESTAMP
+    )`);
+  createIndex(s, "chain_contract_idx", "tokens", "chain, contract_address", true);
+
   console.log("\n[indexes]");
   const indexDefs = [
     ["idx_operations_user_id", "operations", "user_id"],
@@ -346,6 +402,8 @@ export function runMigrations(sqlitep?: Database): void {
   for (const [name, table, column] of indexDefs) {
     createIndex(s, name, table, column);
   }
+
+  ensureSchemaVersion(s);
 
   console.log("\nMigrations complete.");
 }

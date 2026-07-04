@@ -1,4 +1,5 @@
-import { IScanner, RawBlockchainEvent } from "./interface";
+import { IScanner, RawBlockchainEvent, NativeBalanceResult, BalanceEntry, AllBalancesResult } from "./interface";
+import { getNetworkApiKey } from "./api-keys";
 
 interface ExplorerTx {
   hash: string;
@@ -20,6 +21,12 @@ interface ExplorerResponse {
   result: ExplorerTx[];
 }
 
+const EVM_NATIVE_CURRENCY: Record<string, string> = {
+  bsc: "BNB",
+  avalanche: "AVAX",
+  ethereum: "ETH",
+};
+
 const API_URLS: Record<string, { url: string; keyEnv: string }> = {
   bsc: { url: "https://api.bscscan.com/api", keyEnv: "BSCSCAN_API_KEY" },
   avalanche: { url: "https://api.snowtrace.io/api", keyEnv: "SNOWTRACE_API_KEY" },
@@ -37,7 +44,7 @@ export class EvmScanner implements IScanner {
     const cfg = API_URLS[this.network];
     if (!cfg) throw new Error(`Unsupported EVM network: ${this.network}`);
 
-    const apiKey = process.env[cfg.keyEnv] || "";
+    const apiKey = process.env[cfg.keyEnv] || getNetworkApiKey(this.network);
     const events: RawBlockchainEvent[] = [];
 
     const normalTxs = await this.fetchPage(cfg.url, apiKey, "txlist", address, fromBlock);
@@ -74,6 +81,48 @@ export class EvmScanner implements IScanner {
 
     events.sort((a, b) => a.timestamp - b.timestamp);
     return events;
+  }
+
+  async fetchNativeBalance(address: string): Promise<NativeBalanceResult | null> {
+    const cfg = API_URLS[this.network];
+    if (!cfg) return null;
+
+    const apiKey = process.env[cfg.keyEnv] || getNetworkApiKey(this.network);
+
+    try {
+      const balanceRes = await fetch(
+        `${cfg.url}?module=account&action=balance&address=${address}&apikey=${apiKey}`,
+        { signal: AbortSignal.timeout(15000) }
+      );
+      if (!balanceRes.ok) return null;
+      const balanceData: { status: string; result: string } = await balanceRes.json();
+      if (balanceData.status !== "1") return null;
+
+      const blockRes = await fetch(
+        `${cfg.url}?module=proxy&action=eth_blockNumber&apikey=${apiKey}`,
+        { signal: AbortSignal.timeout(15000) }
+      );
+      if (!blockRes.ok) return null;
+      const blockData: { result: string } = await blockRes.json();
+
+      return {
+        balance: balanceData.result,
+        decimals: 18,
+        blockNumber: parseInt(blockData.result, 16),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async fetchAllBalances(address: string): Promise<AllBalancesResult | null> {
+    const native = await this.fetchNativeBalance(address);
+    if (!native) return null;
+    const currency = EVM_NATIVE_CURRENCY[this.network] || this.network.toUpperCase();
+    return {
+      balances: [{ currency, balance: native.balance, decimals: native.decimals }],
+      blockNumber: native.blockNumber,
+    };
   }
 
   private async fetchPage(

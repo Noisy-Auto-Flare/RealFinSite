@@ -10,12 +10,31 @@ export interface RawBlockchainEvent {
   tokenSymbol?: string;
 }
 
+export interface NativeBalanceResult {
+  balance: string;
+  decimals: number;
+  blockNumber: number;
+}
+
+export interface BalanceEntry {
+  currency: string;
+  balance: string;
+  decimals: number;
+}
+
+export interface AllBalancesResult {
+  balances: BalanceEntry[];
+  blockNumber: number;
+}
+
 export interface IScanner {
   network: string;
   fetchNewTransactions(
     address: string,
     fromBlock: number
   ): Promise<RawBlockchainEvent[]>;
+  fetchNativeBalance(address: string): Promise<NativeBalanceResult | null>;
+  fetchAllBalances(address: string): Promise<AllBalancesResult | null>;
 }
 
 export async function getScanner(network: string): Promise<IScanner | null> {

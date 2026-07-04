@@ -1,6 +1,8 @@
 import { fetchAndStoreRates } from "@/lib/rates/coingecko";
 import { runScannerCycle } from "./runner";
 
+const JOBS_KEY = "__fintracker_background_jobs";
+
 function logSchedulerEvent(action: string, details: string) {
   const timestamp = new Date().toISOString();
   console.log(`[scheduler] ${timestamp} ${action}: ${details}`);
@@ -27,9 +29,16 @@ export async function runScannerCycleFull(): Promise<void> {
 
 export function startBackgroundJobs(): void {
   if (typeof window !== "undefined") return;
+  if ((globalThis as any)[JOBS_KEY]) return;
+  (globalThis as any)[JOBS_KEY] = true;
 
   try {
     const cron = require("node-cron");
+
+    // Run once after startup settles
+    setTimeout(() => {
+      runScannerCycleFull();
+    }, 5000);
 
     // Update rates every 10 minutes
     cron.schedule("*/10 * * * *", () => {

@@ -3,7 +3,7 @@ import { runMigrations } from "@/db/migrate";
 import { startBackgroundJobs } from "@/lib/scanners/scheduler";
 import bcrypt from "bcryptjs";
 
-let initialized = false;
+const INIT_KEY = "__fintracker_initialized";
 
 function autoSeedMasterUser(sqlite: Database.Database): void {
   const userCount = sqlite.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
@@ -24,8 +24,8 @@ function autoSeedMasterUser(sqlite: Database.Database): void {
 }
 
 export function initializeApp(): void {
-  if (initialized) return;
-  initialized = true;
+  if ((globalThis as any)[INIT_KEY]) return;
+  (globalThis as any)[INIT_KEY] = true;
 
   if (process.env.NEXT_PHASE === "phase-production-build") return;
 

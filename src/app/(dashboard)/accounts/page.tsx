@@ -27,6 +27,8 @@ interface Account {
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/accounts")
@@ -34,14 +36,47 @@ export default function AccountsPage() {
       .then((data) => { setAccounts(data); setLoading(false); });
   }, []);
 
+  async function handleSync() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/accounts/sync-balances", { method: "POST" });
+      const data = await res.json();
+      const allCorrections = (data.results || []).flatMap((r: any) =>
+        (r.corrections || []).filter((c: any) => c.correctionAmount != null)
+      );
+      setSyncMsg(`Synced ${data.results?.length || 0} wallets, ${allCorrections.length} balance corrections`);
+      // re-fetch accounts to update displayed balances
+      const accRes = await fetch("/api/accounts");
+      const accData = await accRes.json();
+      setAccounts(accData);
+    } catch {
+      setSyncMsg("Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex justify-between items-center gap-2">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Счета</h1>
-        <Link href="/accounts/new" className="btn btn-primary text-sm md:text-base shrink-0">
-          + Добавить счёт
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="btn btn-ghost text-sm"
+          >
+            {syncing ? "Syncing..." : "Sync balances"}
+          </button>
+          <Link href="/accounts/new" className="btn btn-primary text-sm md:text-base shrink-0">
+            + Добавить счёт
+          </Link>
+        </div>
       </div>
+      {syncMsg && (
+        <div className="text-sm text-[var(--accent)]">{syncMsg}</div>
+      )}
 
       {loading ? (
         <p className="text-[var(--text-muted)]">Загрузка...</p>

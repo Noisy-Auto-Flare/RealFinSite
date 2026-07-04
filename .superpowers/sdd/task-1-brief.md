@@ -1,101 +1,24 @@
-# Task 1: Schema — add new tables, update balances, define relations
+# Task 1: Create `evm/config.ts` — EVM network configuration
 
 **Files:**
-- Modify: `src/db/schema.ts` (entire file)
-- Modify: `src/db/index.ts` (add new relations if any)
-- Modify: `src/lib/init.ts` (register new migration)
-- Modify: `src/test/schema.test.ts` (update for new tables)
+- Create: `src/lib/scanners/evm/config.ts`
 
-**Interfaces:**
-- Consumes: existing `users`, `accounts` table definitions
-- Produces: `operations`, `operationEntries`, `balanceSnapshots` Drizzle tables; `balances` with `updatedAt` removed; `transactions` and `matchedTransactions` removed
+**Acceptance Criteria:**
+1. `EvmNetworkConfig` interface with `name`, `apiUrl`, `envKey`, `nativeSymbol`, `nativeDecimals`
+2. `EVM_NETWORKS` Record with 12 networks: ethereum, bsc, avalanche, polygon, base, arbitrum, optimism, fantom, cronos, aurora, moonbeam, gnosis
+3. Networks use exact values:
+   - ethereum: apiUrl=https://api.etherscan.io/api, envKey=ETHERSCAN_API_KEY, nativeSymbol=ETH, nativeDecimals=18
+   - bsc: apiUrl=https://api.bscscan.com/api, envKey=BSCSCAN_API_KEY, nativeSymbol=BNB, nativeDecimals=18
+   - avalanche: apiUrl=https://api.snowtrace.io/api, envKey=SNOWTRACE_API_KEY, nativeSymbol=AVAX, nativeDecimals=18
+   - polygon: apiUrl=https://api.polygonscan.com/api, envKey=POLYGONSCAN_API_KEY, nativeSymbol=POL, nativeDecimals=18
+   - base: apiUrl=https://api.basescan.org/api, envKey=BASESCAN_API_KEY, nativeSymbol=ETH, nativeDecimals=18
+   - arbitrum: apiUrl=https://api.arbiscan.io/api, envKey=ARBISCAN_API_KEY, nativeSymbol=ETH, nativeDecimals=18
+   - optimism: apiUrl=https://api-optimistic.etherscan.io/api, envKey=OPTIMISM_API_KEY, nativeSymbol=ETH, nativeDecimals=18
+   - fantom: apiUrl=https://api.ftmscan.com/api, envKey=FANTOM_API_KEY, nativeSymbol=FTM, nativeDecimals=18
+   - cronos: apiUrl=https://api.cronoscan.com/api, envKey=CRONOS_API_KEY, nativeSymbol=CRO, nativeDecimals=18
+   - aurora: apiUrl=https://api.aurorascan.dev/api, envKey=AURORA_API_KEY, nativeSymbol=ETH, nativeDecimals=18
+   - moonbeam: apiUrl=https://api.moonbeam.moonscan.io/api, envKey=MOONBEAM_API_KEY, nativeSymbol=GLMR, nativeDecimals=18
+   - gnosis: apiUrl=https://api.gnosisscan.io/api, envKey=GNOSIS_API_KEY, nativeSymbol=xDAI, nativeDecimals=18
+4. `npx tsc --noEmit` passes with no errors
 
-## Steps
-
-### Step 1: Add `operations` table
-
-Insert after `accounts` block:
-
-```typescript
-export const operations = sqliteTable("operations", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: integer("user_id").notNull().references(() => users.id),
-  description: text("description"),
-  category: text("category"),
-  date: text("date").notNull(),
-  source: text("source").notNull().default("manual"),
-  txHash: text("tx_hash"),
-  fromAddress: text("from_address"),
-  toAddress: text("to_address"),
-  blockTimestamp: integer("block_timestamp"),
-  status: text("status").notNull().default("draft"),
-  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
-});
-```
-
-### Step 2: Add `operationEntries` table
-
-```typescript
-export const operationEntries = sqliteTable("operation_entries", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  operationId: integer("operation_id").notNull()
-    .references(() => operations.id, { onDelete: "cascade" }),
-  accountId: integer("account_id").notNull()
-    .references(() => accounts.id),
-  currency: text("currency").notNull(),
-  amount: real("amount").notNull(),
-  type: text("type").notNull().default("principal"),
-  isVerified: integer("is_verified").notNull().default(0),
-});
-```
-
-### Step 3: Add `balanceSnapshots` table
-
-```typescript
-export const balanceSnapshots = sqliteTable("balance_snapshots", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  accountId: integer("account_id").notNull()
-    .references(() => accounts.id, { onDelete: "cascade" }),
-  currency: text("currency").notNull(),
-  amount: real("amount").notNull(),
-  date: text("date").notNull(),
-  comment: text("comment"),
-  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
-});
-```
-
-### Step 4: Remove `updatedAt` from `balances`
-
-Change `balances` to:
-```typescript
-export const balances = sqliteTable("balances", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  accountId: integer("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
-  currency: text("currency").notNull(),
-  amount: real("amount").notNull().default(0),
-}, (table) => ({
-  accountCurrencyUnique: uniqueIndex("account_currency_unique").on(table.accountId, table.currency),
-}));
-```
-
-### Step 5: Remove `transactions` and `matchedTransactions` table definitions
-
-Delete the entire `transactions` and `matchedTransactions` table definitions from `schema.ts`.
-
-### Step 6: Remove `matched_candidate` status and unused transaction references from codebase
-
-Search for all references to `matched_candidate` and `matchedTransactions`/`matched_transactions` in non-test files and remove/update them.
-
-Run: `rg "matched_candidate|matched_transactions|matchedTransactions" src/`
-
-### Step 7: Build test
-
-Run: `npx vitest run`
-Expected: compilation errors due to removed exports in schema.ts
-
-### Step 8: Commit
-
-```bash
-git add src/db/schema.ts
-git commit -m "feat: add operations, operation_entries, balance_snapshots tables; drop transactions, matched_transactions"
-```
+No testing framework for this task — verify with `npx tsc --noEmit`.

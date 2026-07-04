@@ -96,6 +96,28 @@ export const apiCredentials = sqliteTable("api_credentials", {
   lastSyncAt: text("last_sync_at"),
 });
 
+export const blockchainApiKeys = sqliteTable("blockchain_api_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  network: text("network").notNull().unique(),
+  apiKey: text("api_key").notNull(),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP"),
+});
+
+export const tokens = sqliteTable("tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  chain: text("chain").notNull(),
+  contractAddress: text("contract_address").notNull(),
+  symbol: text("symbol").notNull(),
+  name: text("name"),
+  decimals: integer("decimals").notNull().default(18),
+  logoUrl: text("logo_url"),
+  metadataSource: text("metadata_source").default("explorer"),
+  lastMetadataFetch: text("last_metadata_fetch").default("CURRENT_TIMESTAMP"),
+}, (table) => ({
+  chainContractIdx: uniqueIndex("chain_contract_idx").on(table.chain, table.contractAddress),
+}));
+
 export const actionLogs = sqliteTable("action_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),

@@ -102,6 +102,7 @@ export default function Navbar({ role, username }: NavbarProps) {
           <hr className="border-[rgba(255,255,255,0.06)] my-2" />
 
           <NavLink href="/profile" label="Профиль" icon="👤" isActive={pathname === "/profile"} />
+          <NavLink href="/settings" label="Настройки" icon="⚙️" isActive={!!pathname?.startsWith("/settings")} />
 
           {role === "master" && (
             <>
