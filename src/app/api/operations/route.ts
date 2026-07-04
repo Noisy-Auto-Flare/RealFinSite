@@ -9,10 +9,12 @@ import { recalculateAllBalances } from "@/db/migrate";
 
 function detectImplicitFees(entries: { accountId: number; currency: string; amount: number; type: string }[]): { accountId: number; currency: string; deficit: number }[] {
   const principalSum: Record<string, number> = {};
+  const principalCount: Record<string, number> = {};
   for (const e of entries) {
     if (e.type === "principal") {
       const key = `${e.accountId}:${e.currency}`;
       principalSum[key] = (principalSum[key] || 0) + e.amount;
+      principalCount[key] = (principalCount[key] || 0) + 1;
     }
   }
   const fees: { accountId: number; currency: string; deficit: number }[] = [];
@@ -23,6 +25,10 @@ function detectImplicitFees(entries: { accountId: number; currency: string; amou
     if (seen.has(key)) continue;
     seen.add(key);
     const sum = principalSum[key];
+    // A fee only makes sense when there are 2+ principal entries
+    // for the same account+currency (e.g. -1000 incoming + 950 outgoing).
+    // A single principal entry (e.g. -143 expense) is just an expense.
+    if (principalCount[key] < 2) continue;
     if (Math.abs(sum) < 1e-9) continue;
     fees.push({ accountId: e.accountId, currency: e.currency, deficit: sum });
   }
