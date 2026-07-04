@@ -144,6 +144,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
       date,
       description: description || null,
       category: category || null,
+      status: "confirmed",
       entries: entries.map((e) => ({
         accountId: Number(e.accountId),
         currency: e.currency,
@@ -192,8 +193,13 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
     for (const fee of unverifiedFees) {
       await fetch(`/api/entries/${fee.id}/verify`, { method: "PATCH" });
     }
+    await fetch(`/api/operations/${createdOperation.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" }),
+    });
     setConfirmingFees(false);
-    toast.success("Комиссии подтверждены");
+    toast.success("Операция подтверждена");
     onClose();
     window.location.reload();
   }

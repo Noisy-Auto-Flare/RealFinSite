@@ -26,8 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (!op) return NextResponse.json({ error: "Operation not found" }, { status: 404 });
 
-  const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  const body = await request.json().catch(() => ({}));
   const updates: Record<string, unknown> = { isVerified: 1 };
   if (body.amount !== undefined) updates.amount = body.amount;
 
