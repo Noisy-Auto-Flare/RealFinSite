@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, Children, isValidElement } from "react";
+import { useState, useRef, useEffect, Children, isValidElement, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface SelectProps {
   value: string | number;
@@ -9,19 +10,49 @@ interface SelectProps {
   className?: string;
 }
 
+const DROPDOWN_MARGIN = 4;
+
 export default function Select({ value, onChange, children, className = "" }: SelectProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
+
+  const updatePosition = useCallback(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const estimatedHeight = 200;
+    const fitsBelow = rect.bottom + DROPDOWN_MARGIN + estimatedHeight <= vh;
+    setPos({
+      top: fitsBelow ? rect.bottom + DROPDOWN_MARGIN : rect.top - DROPDOWN_MARGIN,
+      left: rect.left,
+      width: rect.width,
+      openUp: !fitsBelow,
+    });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) { setPos(null); return; }
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, updatePosition]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (!open) return;
+      if (triggerRef.current?.contains(e.target as Node)) return;
+      if (dropdownRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [open]);
 
   const options = Children.toArray(children)
     .filter((child): child is React.ReactElement<{
@@ -38,7 +69,7 @@ export default function Select({ value, onChange, children, className = "" }: Se
   const selected = options.find((o) => String(o.value) === String(value));
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={triggerRef} className={`relative ${className}`}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
@@ -66,50 +97,64 @@ export default function Select({ value, onChange, children, className = "" }: Se
         </svg>
       </button>
 
-      <div
-        className="absolute left-0 right-0 z-50 mt-1 rounded-lg border overflow-hidden transition-all duration-200"
-        style={{
-          opacity: open ? 1 : 0,
-          transform: open ? "translateY(0)" : "translateY(-8px)",
-          pointerEvents: open ? "auto" : "none",
-          background: "rgba(21,21,30,0.96)",
-          backdropFilter: "blur(20px)",
-          borderColor: "var(--glass-border)",
-        }}
-      >
-        {options.map((opt, i) => (
-          <div
-            key={opt.value}
-            onClick={() => {
-              if (!opt.disabled) {
-                onChange({ target: { value: opt.value } });
-                setOpen(false);
-              }
-            }}
-            className="px-3 py-2 text-sm cursor-pointer transition-colors"
-            style={{
-              color: String(opt.value) === String(value) ? "var(--accent)" : "var(--text-primary)",
-              background: String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent",
-              opacity: opt.disabled ? 0.4 : 1,
-              fontFamily: "'Onest', system-ui, -apple-system, sans-serif",
-              animationName: open ? "slide-up" : "none",
-              animationDuration: "0.2s",
-              animationTimingFunction: "ease-out",
-              animationFillMode: "both",
-              animationDelay: open ? `${i * 25}ms` : "0ms",
-            }}
-            onMouseEnter={(e) => { if (!opt.disabled) e.currentTarget.style.background = "rgba(233, 177, 163, 0.08)"; }}
-            onMouseLeave={(e) => {
-              if (!opt.disabled) {
-                e.currentTarget.style.background =
-                  String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent";
-              }
-            }}
-          >
-            {opt.label}
-          </div>
-        ))}
-      </div>
+      {open && pos && createPortal(
+        <div
+          ref={dropdownRef}
+          role="listbox"
+          style={{
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+            opacity: 1,
+            transform: "translateY(0)",
+            background: "rgba(21,21,30,0.96)",
+            backdropFilter: "blur(20px)",
+            borderColor: "var(--glass-border)",
+            borderRadius: "0.5rem",
+            border: "1px solid var(--glass-border)",
+            overflow: "hidden",
+          }}
+          className="transition-all duration-200"
+        >
+          {options.map((opt, i) => (
+            <div
+              key={opt.value}
+              role="option"
+              aria-selected={String(opt.value) === String(value)}
+              onClick={() => {
+                if (!opt.disabled) {
+                  onChange({ target: { value: opt.value } });
+                  setOpen(false);
+                }
+              }}
+              className="px-3 py-2 text-sm cursor-pointer transition-colors"
+              style={{
+                color: String(opt.value) === String(value) ? "var(--accent)" : "var(--text-primary)",
+                background: String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent",
+                opacity: opt.disabled ? 0.4 : 1,
+                fontFamily: "'Onest', system-ui, -apple-system, sans-serif",
+                animationName: "slide-up",
+                animationDuration: "0.2s",
+                animationTimingFunction: "ease-out",
+                animationFillMode: "both",
+                animationDelay: `${i * 25}ms`,
+              }}
+              onMouseEnter={(e) => { if (!opt.disabled) e.currentTarget.style.background = "rgba(233, 177, 163, 0.08)"; }}
+              onMouseLeave={(e) => {
+                if (!opt.disabled) {
+                  e.currentTarget.style.background =
+                    String(opt.value) === String(value) ? "rgba(233, 177, 163, 0.1)" : "transparent";
+                }
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
