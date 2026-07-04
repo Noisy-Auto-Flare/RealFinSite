@@ -81,7 +81,7 @@ async function fetchSolanaTokenMetadata(
   cacheKey: string,
 ): Promise<TokenMetadata | null> {
   try {
-    const apiKey = process.env.HELIUS_API_KEY || "";
+    const apiKey = process.env.HELIUS_API_KEY || (await import("@/lib/scanners/api-keys")).getNetworkApiKey("solana") || "";
     if (!apiKey) return null;
 
     const url = `https://api.helius.xyz/v0/token-metadata?apiKey=${apiKey}`;
