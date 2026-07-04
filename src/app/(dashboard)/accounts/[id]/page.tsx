@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS, formatAmount } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
 import Select from "@/components/Select";
@@ -37,6 +37,7 @@ interface Credential {
 
 export default function AccountDetailPage() {
   const toast = useToast();
+  const router = useRouter();
   const params = useParams();
   const accountId = Number(params.id);
 
@@ -51,6 +52,9 @@ export default function AccountDetailPage() {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/accounts/${accountId}`)
@@ -113,6 +117,26 @@ export default function AccountDetailPage() {
     if (match) setCredential(match);
   }
 
+  async function saveEdit() {
+    if (!editName.trim() || !account) return;
+    const res = await fetch(`/api/accounts/${accountId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName.trim() }),
+    });
+    if (!res.ok) { toast.error("Ошибка при сохранении"); return; }
+    setAccount({ ...account, name: editName.trim() });
+    setEditing(false);
+    toast.success("Счёт переименован");
+  }
+
+  async function deleteAccount() {
+    const res = await fetch(`/api/accounts/${accountId}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("Ошибка при удалении"); return; }
+    toast.success("Счёт удалён");
+    router.push("/accounts");
+  }
+
   if (loading) return <p className="text-[var(--text-muted)]">Загрузка...</p>;
   if (!account) return <p className="text-red-400">Счёт не найден</p>;
 
@@ -122,10 +146,44 @@ export default function AccountDetailPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="card">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">{icon}</span>
-          <div>
-            <h1 className="text-xl font-bold">{account.name}</h1>
+        <div className="flex items-start gap-3 mb-4">
+          <span className="text-2xl shrink-0">{icon}</span>
+          <div className="flex-1 min-w-0">
+            {editing ? (
+              <div className="flex gap-2 items-center">
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="flex-1"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") setEditing(false); }}
+                />
+                <button onClick={saveEdit} className="btn btn-primary text-sm px-3">Сохранить</button>
+                <button onClick={() => setEditing(false)} className="btn btn-secondary text-sm px-3">Отмена</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold truncate">{account.name}</h1>
+                <button
+                  onClick={() => { setEditName(account.name); setEditing(true); }}
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0"
+                  title="Редактировать"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setDeleting(true)}
+                  className="text-[var(--danger)] hover:text-red-300 transition-colors shrink-0 ml-auto"
+                  title="Удалить счёт"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
+              </div>
+            )}
             <p className="text-sm text-[var(--text-muted)]">{label}</p>
           </div>
         </div>
@@ -229,6 +287,22 @@ export default function AccountDetailPage() {
         </div>
       )}
 
+      {deleting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--bg-secondary)] rounded-xl w-full max-w-sm shadow-2xl border border-[var(--border)] p-6 space-y-4">
+            <h2 className="font-bold text-lg">Удалить счёт?</h2>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Все балансы и адреса будут удалены. Операции останутся в истории.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleting(false)} className="btn btn-secondary flex-1">Отмена</button>
+              <button onClick={deleteAccount} className="btn bg-red-500/10 text-red-400 hover:bg-red-500/20 flex-1">
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

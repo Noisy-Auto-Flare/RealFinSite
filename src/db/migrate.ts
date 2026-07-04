@@ -170,6 +170,10 @@ export function recalculateAllBalances(sqlitep?: Database): void {
     WHERE o.status = 'confirmed'
     GROUP BY oe.account_id, oe.currency;
   `);
+  s.exec(`
+    INSERT OR IGNORE INTO balances (account_id, currency, amount)
+    SELECT a.id, a.currency, 0 FROM accounts a;
+  `);
   console.log("  ✓ balances recalculated from confirmed entries");
 }
 
