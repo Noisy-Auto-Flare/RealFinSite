@@ -3,7 +3,6 @@ import { ensureFresh } from "../ensure-fresh";
 import { getAccounts } from "@/lib/beancount/fava-api";
 import { db } from "@/db";
 import { accounts as accountsTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export async function GET() {
   ensureFresh();
