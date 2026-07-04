@@ -3,6 +3,7 @@ import { accountAddresses, accounts, operations, operationEntries } from "@/db/s
 import { eq, and, sql } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
 import { recalculateAllBalances } from "@/db/migrate";
+import { getTokenMetadata } from "@/lib/token-metadata";
 
 export const NATIVE_CURRENCIES: Record<string, string> = {
   bsc: "BNB",
@@ -81,7 +82,15 @@ async function processEvent(
   }
 
   const nativeSymbol = NATIVE_CURRENCIES[network] || "ETH";
-  const currency = evt.tokenSymbol || (evt.tokenContract ? "TOKEN" : nativeSymbol);
+  let currency: string;
+  if (evt.tokenSymbol) {
+    currency = evt.tokenSymbol;
+  } else if (evt.tokenContract) {
+    const meta = await getTokenMetadata(network, evt.tokenContract);
+    currency = meta?.symbol || "TOKEN";
+  } else {
+    currency = nativeSymbol;
+  }
   const humanAmount = parseFloat(evt.amount) / Math.pow(10, evt.decimals);
 
   if (humanAmount <= 0) return;
