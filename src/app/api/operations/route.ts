@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/server-utils";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/db/migrate";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 
 function detectImplicitFees(entries: { accountId: number; currency: string; amount: number; type: string }[]): { accountId: number; currency: string; deficit: number }[] {
   const principalSum: Record<string, number> = {};
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
 
   if (status === "confirmed") {
     recalculateAllBalances();
+    markDirty();
   }
 
   const session = await auth();

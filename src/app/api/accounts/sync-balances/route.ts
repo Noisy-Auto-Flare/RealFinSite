@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { syncAddressBalance } from "@/lib/scanners/runner";
 import { recalculateAllBalances } from "@/db/migrate";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 
 export async function POST() {
   const userId = await getCurrentUserId();
@@ -45,6 +46,7 @@ export async function POST() {
   }
 
   recalculateAllBalances();
+  markDirty();
 
   return NextResponse.json({ success: true, results });
 }

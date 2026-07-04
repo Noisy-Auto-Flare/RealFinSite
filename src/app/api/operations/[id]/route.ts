@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/server-utils";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/db/migrate";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
@@ -54,6 +55,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (body.status === "confirmed" && existing.status !== "confirmed") {
     recalculateAllBalances();
+    markDirty();
   }
 
   const session = await auth();
@@ -89,6 +91,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   db.delete(operations).where(eq(operations.id, opId)).run();
 
   recalculateAllBalances();
+  markDirty();
 
   const session = await auth();
   logAction({

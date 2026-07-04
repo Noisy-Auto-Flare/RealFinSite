@@ -3,6 +3,7 @@ import { accountAddresses, accounts, operations, operationEntries } from "@/db/s
 import { eq, and, sql } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
 import { recalculateAllBalances } from "@/db/migrate";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 import { getTokenMetadata } from "@/lib/token-metadata";
 
 export const NATIVE_CURRENCIES: Record<string, string> = {
@@ -56,6 +57,7 @@ export async function runScannerCycle(): Promise<void> {
     }
 
     recalculateAllBalances();
+    markDirty();
 
     const maxBlock = Math.max(...events.map((e) => e.blockNumber), row.addr.lastSyncBlock ?? 0);
     db.update(accountAddresses)
@@ -183,6 +185,8 @@ export async function syncAddressBalance(
 
     corrections.push({ currency: be.currency, delta, correctionAmount: delta });
   }
+
+  markDirty();
 
   // Update lastSyncBlock to the fetched block, never rolling back
   const current = db.select({ lastSyncBlock: accountAddresses.lastSyncBlock })
