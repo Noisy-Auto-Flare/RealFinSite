@@ -14,7 +14,7 @@ const sqlite = new DatabaseClass(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function getSchemaVersion(s: Database): number {
   try {
@@ -402,6 +402,13 @@ export function runMigrations(sqlitep?: Database): void {
   for (const [name, table, column] of indexDefs) {
     createIndex(s, name, table, column);
   }
+
+  console.log("\n[beancount_dirty]");
+  createTable(s, "beancount_dirty", `(
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  is_dirty INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT
+)`);
 
   ensureSchemaVersion(s);
 
