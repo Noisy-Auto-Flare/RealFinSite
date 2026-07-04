@@ -11,6 +11,7 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_TRUST_HOST=1
       - DATABASE_URL=${DATABASE_URL:-/data/finance.db}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - MASTER_USERNAME=${MASTER_USERNAME:-admin}

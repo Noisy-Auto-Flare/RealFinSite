@@ -222,7 +222,9 @@ export function runMigrations(sqlitep?: Database): void {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     base_currency TEXT NOT NULL,
     quote_currency TEXT NOT NULL,
-    rate REAL NOT NULL
+    rate REAL NOT NULL,
+    source TEXT DEFAULT 'coingecko',
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`);
   createTable(s, "api_credentials", `(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -243,6 +245,8 @@ export function runMigrations(sqlitep?: Database): void {
   createIndex(s, "account_currency_unique", "balances", "account_id, currency", true);
 
   console.log("\n[exchange_rates]");
+  addColumn(s, "exchange_rates", "source", "TEXT DEFAULT 'coingecko'");
+  addColumn(s, "exchange_rates", "updated_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
   createIndex(s, "pair_unique", "exchange_rates", "base_currency, quote_currency", true);
 
   console.log("\n[api_credentials]");
