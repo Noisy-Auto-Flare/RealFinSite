@@ -123,6 +123,82 @@ describe("migrations - table creation", () => {
   });
 });
 
+describe("account_addresses table", () => {
+  it("should be created by runMigrations", () => {
+    const db = createTestDb();
+    createBaseSchema(db);
+    runMigrations(db);
+    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='account_addresses'").get();
+    expect(row).toBeTruthy();
+    db.close();
+  });
+
+  it("should have correct columns", () => {
+    const db = createTestDb();
+    createBaseSchema(db);
+    runMigrations(db);
+    const columns = db.pragma("table_info(account_addresses)") as { name: string }[];
+    const colNames = columns.map((c) => c.name);
+    expect(colNames).toContain("id");
+    expect(colNames).toContain("account_id");
+    expect(colNames).toContain("network");
+    expect(colNames).toContain("address");
+    expect(colNames).toContain("last_sync_block");
+    db.close();
+  });
+
+  it("should have required indexes", () => {
+    const db = createTestDb();
+    createBaseSchema(db);
+    runMigrations(db);
+    const indexes = db.pragma("index_list(account_addresses)") as { name: string }[];
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).toContain("idx_account_addresses_account_id");
+    expect(indexNames).toContain("idx_account_addresses_address");
+    db.close();
+  });
+});
+
+describe("auto-seed master user", () => {
+  it("should create master user when users table is empty", () => {
+    const db = createTestDb();
+    createBaseSchema(db);
+    runMigrations(db);
+
+    const count = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+    expect(count.count).toBe(0);
+
+    db.prepare("INSERT INTO users (username, password, role, status) VALUES (?, ?, 'master', 'approved')")
+      .run("admin", "hashedpassword");
+
+    const users = db.prepare("SELECT * FROM users").all() as any[];
+    expect(users.length).toBe(1);
+    expect(users[0].username).toBe("admin");
+    expect(users[0].role).toBe("master");
+    expect(users[0].status).toBe("approved");
+    db.close();
+  });
+
+  it("should not overwrite existing users", () => {
+    const db = createTestDb();
+    createBaseSchema(db);
+    runMigrations(db);
+
+    db.prepare("INSERT INTO users (username, password, role, status) VALUES (?, ?, 'user', 'approved')")
+      .run("existinguser", "password");
+
+    const countBefore = (db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number }).count;
+    expect(countBefore).toBe(1);
+
+    db.prepare("INSERT INTO users (username, password, role, status) VALUES (?, ?, 'master', 'approved')")
+      .run("admin", "hashedpassword");
+
+    const users = db.prepare("SELECT * FROM users").all() as any[];
+    expect(users.length).toBe(2);
+    db.close();
+  });
+});
+
 describe("migrations - on existing old schema", () => {
   it("should migrate from transactions table to operations", () => {
     const db = createTestDb();

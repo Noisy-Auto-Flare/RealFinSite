@@ -308,6 +308,15 @@ export function runMigrations(sqlitep?: Database): void {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
 
+  console.log("\n[account_addresses]");
+  createTable(s, "account_addresses", `(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      network TEXT NOT NULL,
+      address TEXT NOT NULL,
+      last_sync_block INTEGER DEFAULT 0
+    )`);
+
   console.log("\n[multi-leg migration]");
   migrateToMultiLeg(s);
 
@@ -327,6 +336,8 @@ export function runMigrations(sqlitep?: Database): void {
     ["idx_balance_snapshots_date", "balance_snapshots", "date"],
     ["idx_action_logs_user", "action_logs", "user_id"],
     ["idx_action_logs_created", "action_logs", "created_at"],
+    ["idx_account_addresses_account_id", "account_addresses", "account_id"],
+    ["idx_account_addresses_address", "account_addresses", "address"],
   ];
   for (const [name, table, column] of indexDefs) {
     createIndex(s, name, table, column);
