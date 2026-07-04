@@ -42,7 +42,7 @@ export async function getScanner(network: string): Promise<IScanner | null> {
     case "bsc":
     case "avalanche":
     case "ethereum": {
-      const { EvmScanner } = await import("./evm");
+      const { EvmScanner } = await import("./evm/scanner");
       return new EvmScanner(network);
     }
     case "solana": {
