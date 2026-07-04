@@ -39,6 +39,8 @@ if [ -n "$DOMAIN" ]; then
     echo "NEXTAUTH_URL=https://$DOMAIN" >> .env
     info "Set NEXTAUTH_URL=https://$DOMAIN in .env"
   fi
+  # export so Docker Compose picks it up over stale shell variable
+  export NEXTAUTH_URL="https://$DOMAIN"
   # trust host bypasses proxy URL mismatch in Auth.js v5
   if ! grep -q "^AUTH_TRUST_HOST=" .env 2>/dev/null; then
     echo "AUTH_TRUST_HOST=1" >> .env
