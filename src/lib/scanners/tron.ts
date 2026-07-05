@@ -3,7 +3,6 @@ import { getNetworkApiKey } from "./api-keys";
 
 interface Trc20Transfer {
   transaction_id: string;
-  block_number: number;
   block_timestamp: number;
   from: string;
   to: string;
@@ -28,6 +27,7 @@ interface Trc20TokenMeta {
 
 const TRC20_DECIMALS: Record<string, number> = {};
 const TRC20_SYMBOLS: Record<string, string> = {};
+const TX_BLOCK_CACHE: Record<string, number> = {};
 
 export class TronScanner implements IScanner {
   network = "tron";
@@ -36,7 +36,7 @@ export class TronScanner implements IScanner {
     const events: RawBlockchainEvent[] = [];
     const apiKey = process.env.TRONGRID_API_KEY || getNetworkApiKey("tron") || "";
 
-    let url = `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=200&order_by=block_number,asc`;
+    let url = `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=200`;
     if (fromBlock > 0) url += `&block_number=${fromBlock}`;
     if (apiKey) url += `&api_key=${apiKey}`;
 
@@ -48,6 +48,8 @@ export class TronScanner implements IScanner {
       if (!data.data?.length) return events;
 
       for (const tx of data.data) {
+        if (tx.type === "Approval") continue;
+        const blockNumber = await getTxBlockNumber(tx.transaction_id);
         events.push({
           txHash: tx.transaction_id,
           fromAddress: tx.from,
@@ -56,7 +58,7 @@ export class TronScanner implements IScanner {
           tokenContract: tx.token_info.address,
           decimals: tx.token_info.decimals,
           timestamp: Math.floor(tx.block_timestamp / 1000),
-          blockNumber: tx.block_number,
+          blockNumber,
           tokenSymbol: tx.token_info.symbol,
         });
       }
@@ -135,6 +137,28 @@ export class TronScanner implements IScanner {
       return null;
     }
   }
+}
+
+async function getTxBlockNumber(txId: string): Promise<number> {
+  if (TX_BLOCK_CACHE[txId] !== undefined) return TX_BLOCK_CACHE[txId];
+
+  try {
+    const res = await fetch("https://api.trongrid.io/wallet/gettransactioninfobyid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: txId }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const data: { blockNumber?: number } = await res.json();
+      if (data.blockNumber) {
+        TX_BLOCK_CACHE[txId] = data.blockNumber;
+        return data.blockNumber;
+      }
+    }
+  } catch {}
+
+  return 0;
 }
 
 async function getTrc20Meta(contract: string): Promise<{ decimals: number; symbol: string }> {
