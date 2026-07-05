@@ -16,7 +16,7 @@ interface HeliusTx {
     fromUserAccount: string;
     toUserAccount: string;
     mint: string;
-    rawTokenAmount: {
+    rawTokenAmount?: {
       tokenAmount: string;
     };
   }[];
@@ -93,6 +93,7 @@ export class SolanaScanner implements IScanner {
 
         if (tx.tokenTransfers) {
           for (const t of tx.tokenTransfers) {
+            if (!t.rawTokenAmount) continue;
             const mint = t.mint;
             const { decimals, symbol } = await getSplMeta(mint);
             events.push({
