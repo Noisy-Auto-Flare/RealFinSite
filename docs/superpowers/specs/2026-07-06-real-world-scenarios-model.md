@@ -125,7 +125,7 @@ Predefined tags with usage guidelines:
 | `здоровье` | `#34d399` | Лекарства, врачи, спорт |
 | `бизнес` | `#6366f1` | Доходы/расходы по фрилансу, работе |
 | `зарплата` | `#a3e635` | Основной доход от работы |
-| `прочее` | `#6b7280` | Если ничего не подходит |
+| *(пользовательские)* | — | Можно добавлять свои теги через API/UI |
 
 ---
 
@@ -216,7 +216,7 @@ Debt: personName="Иван", amount=4000, currency=RUB, status=active,
 Op: description="Занял Ивану", status="confirmed"
   Entry: Наличные, RUB, -4000, principal
   debtId: D
-  Tags: прочее
+  Tags: —
 ```
 
 When repaid:
@@ -225,7 +225,7 @@ When repaid:
 Op: description="Иван вернул долг", status="confirmed"
   Entry: Наличные, RUB, +4000, principal
   debtId: D
-  Tags: прочее
+  Tags: —
 
 → System auto-sets debt D.status = 'settled', D.settledAt = now
 ```

@@ -20,9 +20,20 @@ const DEFAULT_TAGS = [
   { name: "зарплата", color: "#a3e635", description: "Основной доход от работы" },
 ];
 
+function seedDefaultTags() {
+  const count = db.select({ count: sql<number>`count(*)` }).from(tags).get()?.count || 0;
+  if (count === 0) {
+    for (const t of DEFAULT_TAGS) {
+      db.insert(tags).values(t).run();
+    }
+  }
+}
+
 export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  seedDefaultTags();
 
   const list = db.select().from(tags).all();
   return NextResponse.json(list);
@@ -37,12 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 
-  const count = db.select({ count: sql<number>`count(*)` }).from(tags).get()?.count || 0;
-  if (count === 0) {
-    for (const t of DEFAULT_TAGS) {
-      db.insert(tags).values(t).run();
-    }
-  }
+  seedDefaultTags();
 
   const existing = db.select().from(tags).where(eq(tags.name, body.name)).get();
   if (existing) {

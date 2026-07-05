@@ -1,27 +1,20 @@
-# Task 3: Dashboard — Full Aurora Redesign
+# Task 3 Report: Debts API + Groups API
 
 **Status:** DONE
 
-## Changes
+## Deliverables
 
-- Rewrote `src/app/(dashboard)/dashboard/page.tsx` with the Aurora redesign:
-  - Header with greeting, search, currency toggle (RUB/USD), "Добавить" button
-  - Balance grid with 3 cards: total capital, income, expenses
-  - Two-column layout: canvas chart + recent transactions
-  - Quick actions: Доход, Расход, Счета, История
-  - NewTransactionModal integration
-  - Canvas-based chart with period tabs (week/month/year)
-  - Font Awesome icons, AnimatedCounter components
+### Files created
+| File | Lines | Endpoints |
+|------|-------|-----------|
+| `src/app/api/debts/route.ts` | 52 | `GET /api/debts`, `POST /api/debts` |
+| `src/app/api/debts/[id]/route.ts` | 48 | `PATCH /api/debts/[id]`, `DELETE /api/debts/[id]` |
+| `src/app/api/groups/route.ts` | 33 | `GET /api/groups`, `POST /api/groups` |
+| `src/app/api/groups/[id]/route.ts` | 80 | `GET /api/groups/[id]`, `DELETE /api/groups/[id]` |
 
-## Verification
+### Commit
+`f406096` — `feat: debts and groups CRUD API`
 
-- `npm run typecheck` — passes
-- `npm run build` — passes
-
-## Deviation from brief
-
-- Changed `canvas.getContext("2d")` to use non-null assertion (`!`) instead of `if (!ctx) return;` guard, because the inner `drawLine` function captures `ctx` from the closure and TypeScript's control flow analysis cannot narrow the nullable type inside the inner function, causing 24 TS18047 errors.
-
-## Related files
-
-- `.superpowers/sdd/task-3-brief.md` — task brief
+### Verification
+- `npm run build` — compiled with 0 errors (1 pre-existing warning in health route)
+- All 4 routes registered in Next.js route table (`/api/debts`, `/api/debts/[id]`, `/api/groups`, `/api/groups/[id]`)

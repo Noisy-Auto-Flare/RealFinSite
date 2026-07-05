@@ -13,6 +13,8 @@ interface OperationSummary {
   date: string;
   source: string;
   status: string;
+  groupId?: number;
+  tags?: string[];
   entries: { currency: string; amount: number; type: string }[];
 }
 
@@ -46,7 +48,7 @@ export default function TransactionsPage() {
   const [showNewTx, setShowNewTx] = useState(false);
   const [groups, setGroups] = useState<Record<number, { firstOpDescription: string | null; opCount: number }>>({});
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
-  const [groupOperations, setGroupOperations] = useState<any[]>([]);
+  const [groupOperations, setGroupOperations] = useState<OperationSummary[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -224,16 +226,16 @@ export default function TransactionsPage() {
                       {tx.status === "draft" && <span className="badge badge-pending" style={{ marginLeft: "8px" }}>Черновик</span>}
                     </div>
                   </div>
-                  {(tx as any).groupId && groups[(tx as any).groupId] && (
+                  {tx.groupId && groups[tx.groupId] && (
                     <button
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 mt-1 hover:bg-[var(--accent)]/20 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setExpandedGroupId(expandedGroupId === (tx as any).groupId ? null : (tx as any).groupId);
+                        setExpandedGroupId(expandedGroupId === tx.groupId ? null : (tx.groupId ?? null));
                       }}
                     >
                       <i className="fa-solid fa-layer-group text-[9px]" />
-                      Группа ({groups[(tx as any).groupId].opCount})
+                      Группа ({groups[tx.groupId].opCount})
                     </button>
                   )}
                   <div className={`tx-amount mono ${totalAmount > 0 ? "income" : "expense"}`}>
@@ -266,7 +268,7 @@ export default function TransactionsPage() {
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
-            {groupOperations.map((gop: any) => (
+            {groupOperations.map((gop: OperationSummary) => (
               <div key={gop.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                 <div className="flex items-center gap-2">
                   <i className={`fa-solid ${getTxIcon(gop.entries, gop.source)} ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"} text-sm`} />

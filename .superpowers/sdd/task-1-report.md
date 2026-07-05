@@ -1,28 +1,31 @@
-# Task 1 Report: CSS Foundation + Font Awesome CDN
+# Task 1: Schema Migrations — Report
 
 ## What was implemented
 
-- **globals.css**: Replaced entirely with the Aurora design system — new CSS variables (`--shadow`, `--sidebar-width`, `--nav-height`, `--radius`, `--radius-sm`), utility classes (`.mono`, `.mono-medium`, `.aurora-bg`), layout classes (`.main-content`, `.page-header`, `.page-header-actions`, `.search-wrap`), dashboard classes (`.balance-grid`, `.balance-card`, `.stat-card`, `.dashboard-grid`, `.chart-card`, `.chart-container`, `.tx-list`, `.tx-item`, `.quick-actions`, `.quick-action`), button/icon classes (`.btn-icon`, `.btn-primary`), responsive breakpoints (1200px, 768px, 400px), animations (fade-in, slide-up, modal-enter), and custom scrollbar styling.
+- **New tables** in `src/db/schema.ts`: `debts`, `operationGroups`, `tags`, `operationTags` (with unique composite index)
+- **New columns** on `operations` table: `group_id`, `custom_rate`, `custom_rate_label`, `debt_id` (with FK to debts)
+- **Migration v4** in `src/db/migrate.ts`: creates new tables, adds new columns via ALTER TABLE, bumps SCHEMA_VERSION from 3 to 4
+- **External account type** support:
+  - `src/lib/utils.ts`: union type, label ("Внешний счёт"), icon (🫴)
+  - `src/app/(dashboard)/accounts/page.tsx`: icon (`fa-hand-holding-dollar`), color (`amber`)
+  - `src/app/(dashboard)/accounts/new/page.tsx`: added `"external"` to the type list
 
-- **layout.tsx**: Added Font Awesome CDN `<link>` in `<head>`, added `.aurora-bg` div inside `<body>` with `aria-hidden="true"`, removed `data-scroll-behavior` attribute and `min-h-screen` class.
+## Test results
 
-- **(dashboard)/layout.tsx**: Replaced `p-6 lg:ml-64` with `main-content` class (sidebar margin is now handled by CSS via `--sidebar-width`).
-
-## What was tested
-
-- `npm run dev` — started successfully (Ready in 374ms), served pages with 200 status, no CSS or compilation errors.
+`npm run dev` compiled without errors. Migration ran successfully:
+- All 4 new tables created (operation_groups, debts, tags, operation_tags)
+- Unique index on operation_tags created (operation_tag_pk)
+- All 4 new columns added to operations table
+- App pages served with 200 status
 
 ## Files changed
 
-- `src/app/globals.css` (589 insertions, 342 deletions)
-- `src/app/layout.tsx` (+9/-4)
-- `src/app/(dashboard)/layout.tsx` (+1/-1)
+- `src/db/schema.ts` — +4 tables, +4 columns on operations
+- `src/db/migrate.ts` — SCHEMA_VERSION 3→4, migration code for new tables + columns
+- `src/lib/utils.ts` — added `"external"` to AccountType union, label, and icon maps
+- `src/app/(dashboard)/accounts/page.tsx` — added external icon and color
+- `src/app/(dashboard)/accounts/new/page.tsx` — added `"external"` to account types list
 
-## Self-review findings
-
-- The old CSS had some classes (`.toast-*`, `.btn-secondary`, `.btn-success`, `.btn-danger`, `.drawer-panel`, `.pulse-glow` animations) that don't exist in the new Aurora CSS. These were deliberately replaced per the brief — downstream components will use the new classes.
-- The `Link` import from `next/link` listed in the brief's layout.tsx code block was not included because it would be an unused import. It will likely be added in Task 2 (Navbar).
-
-## Issues or concerns
+## Concerns
 
 None.

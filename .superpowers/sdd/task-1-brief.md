@@ -1,862 +1,159 @@
-### Task 1: CSS Foundation + Font Awesome CDN
+### Task 1: Schema Migrations — New Tables + Columns
 
 **Files:**
-- Modify: `src/app/globals.css`
-- Modify: `src/app/layout.tsx`
+- Modify: `src/db/schema.ts`
+- Modify: `src/db/migrate.ts`
 
 **Interfaces:**
-- Consumes: Current CSS variables and component classes
-- Produces: New `.aurora-bg`, `.mono`, `.tx-item`, `.balance-grid`, `.quick-actions` classes used by all pages
-
-- [ ] **Step 1: Replace globals.css with the Aurora design system**
-
-Replace the entire `src/app/globals.css` with:
-
-```css
-@import "tailwindcss";
-@import "@fontsource/onest/400.css";
-@import "@fontsource/onest/500.css";
-@import "@fontsource/onest/600.css";
-@import "@fontsource/onest/700.css";
-@import "@fontsource/dm-mono/400.css";
-@import "@fontsource/dm-mono/500.css";
-
-:root {
-  --bg-primary: #0f0f13;
-  --bg-secondary: #15151e;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 12px;
-  --accent: #E9B1A3;
-  --accent-hover: #d49a8a;
-  --accent-secondary: #fbbf24;
-  --text-primary: #f1f1f3;
-  --text-secondary: #9b9ba7;
-  --text-muted: #5c5c6a;
-  --border: rgba(255, 255, 255, 0.06);
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-  --sidebar-width: 240px;
-  --nav-height: 68px;
-  --radius: 16px;
-  --radius-sm: 10px;
-}
-
-* {
-  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s, opacity 0.2s;
-}
-
-html {
-  font-size: 16px;
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: 'Onest', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.mono {
-  font-family: 'DM Mono', 'Fira Code', monospace;
-  font-weight: 400;
-}
-
-.mono-medium {
-  font-family: 'DM Mono', 'Fira Code', monospace;
-  font-weight: 500;
-}
-
-.aurora-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 80% 50% at 10% 20%, rgba(233, 177, 163, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 90% 30%, rgba(251, 191, 36, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 20% 70%, rgba(233, 177, 163, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 80% 80%, rgba(251, 191, 36, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 30% at 50% 10%, rgba(233, 177, 163, 0.06) 0%, transparent 45%),
-    radial-gradient(ellipse 40% 30% at 30% 90%, rgba(251, 191, 36, 0.04) 0%, transparent 45%),
-    radial-gradient(ellipse 30% 25% at 70% 60%, rgba(233, 177, 163, 0.05) 0%, transparent 40%),
-    radial-gradient(ellipse 30% 25% at 15% 40%, rgba(251, 191, 36, 0.03) 0%, transparent 40%),
-    radial-gradient(ellipse 20% 20% at 85% 15%, rgba(233, 177, 163, 0.04) 0%, transparent 35%),
-    radial-gradient(ellipse 20% 20% at 5% 85%, rgba(251, 191, 36, 0.03) 0%, transparent 35%),
-    radial-gradient(ellipse 15% 15% at 50% 50%, rgba(233, 177, 163, 0.02) 0%, transparent 30%),
-    var(--bg-primary);
-}
-
-.main-content {
-  flex: 1;
-  margin-left: var(--sidebar-width);
-  padding: 28px 36px 100px 36px;
-  position: relative;
-  z-index: 1;
-  min-height: 100vh;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.page-header-left h2 {
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
-}
-
-.page-header-left p {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-top: 2px;
-}
-
-.page-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.search-wrap {
-  position: relative;
-}
-
-.search-wrap input {
-  background: var(--bg-card);
-  border: 1px solid var(--glass-border);
-  border-radius: 30px;
-  padding: 10px 18px 10px 44px;
-  color: var(--text-primary);
-  font-family: 'Onest', sans-serif;
-  font-size: 14px;
-  width: 220px;
-  outline: none;
-  transition: border 0.2s, box-shadow 0.2s;
-}
-
-.search-wrap input::placeholder {
-  color: var(--text-muted);
-}
-
-.search-wrap input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(233, 177, 163, 0.1);
-}
-
-.search-wrap i {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 15px;
-}
-
-.btn-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 1px solid var(--glass-border);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.btn-icon:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.btn-icon .dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  background: var(--danger);
-  border-radius: 50%;
-  border: 2px solid var(--bg-secondary);
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg-primary);
-  border: none;
-  padding: 10px 24px;
-  border-radius: 30px;
-  font-family: 'Onest', sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(233, 177, 163, 0.25);
-}
-
-.btn-primary i {
-  font-size: 15px;
-}
-
-.card {
-  background: var(--bg-card);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
-}
-
-.balance-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.balance-card {
-  padding: 24px 28px;
-  position: relative;
-  overflow: hidden;
-}
-
-.balance-card .card-glow {
-  position: absolute;
-  top: -40%;
-  right: -20%;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(233, 177, 163, 0.06), transparent 70%);
-  pointer-events: none;
-  border-radius: 50%;
-}
-
-.balance-card .label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.balance-card .label i {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.balance-card .amount {
-  font-size: 34px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-  line-height: 1.2;
-}
-
-.balance-card .amount .currency {
-  font-size: 20px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  margin-right: 4px;
-}
-
-.balance-card .change {
-  margin-top: 8px;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 12px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.balance-card .change.positive {
-  color: var(--success);
-  background: rgba(34, 197, 94, 0.12);
-}
-
-.balance-card .change.negative {
-  color: var(--danger);
-  background: rgba(239, 68, 68, 0.12);
-}
-
-.balance-card .sub-info {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-.balance-card.accent-border {
-  border-color: rgba(233, 177, 163, 0.15);
-}
-
-.balance-card.accent-border .amount {
-  color: var(--accent);
-}
-
-.stat-card .amount {
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-}
-
-.stat-card .amount .currency {
-  font-size: 18px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  margin-right: 4px;
-}
-
-.stat-card .label {
-  font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.stat-card .stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  margin-bottom: 12px;
-}
-
-.stat-card .stat-icon.green {
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--success);
-}
-
-.stat-card .stat-icon.red {
-  background: rgba(239, 68, 68, 0.12);
-  color: var(--danger);
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.chart-card {
-  padding: 24px 24px 20px 24px;
-}
-
-.chart-card .chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.chart-card .chart-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.chart-card .chart-header .chart-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--bg-card);
-  border-radius: 30px;
-  padding: 3px;
-  border: 1px solid var(--glass-border);
-}
-
-.chart-card .chart-header .chart-tabs button {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: 'Onest', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 14px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.chart-card .chart-header .chart-tabs button.active {
-  background: var(--accent);
-  color: var(--bg-primary);
-}
-
-.chart-card .chart-header .chart-tabs button:hover:not(.active) {
-  color: var(--text-primary);
-}
-
-.chart-container {
-  width: 100%;
-  height: 180px;
-  position: relative;
-}
-
-.chart-legend {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  margin-top: 16px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.chart-legend .legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chart-legend .legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.chart-legend .legend-dot.income {
-  background: var(--success);
-}
-
-.chart-legend .legend-dot.expense {
-  background: var(--danger);
-}
-
-.tx-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tx-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  transition: background 0.2s;
-  cursor: pointer;
-}
-
-.tx-item:hover {
-  background: var(--bg-card);
-}
-
-.tx-item .tx-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  flex-shrink: 0;
-}
-
-.tx-item .tx-icon.blue { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
-.tx-item .tx-icon.green { background: rgba(34, 197, 94, 0.12); color: var(--success); }
-.tx-item .tx-icon.purple { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
-.tx-item .tx-icon.orange { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
-.tx-item .tx-icon.red { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
-
-.tx-item .tx-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.tx-item .tx-info .tx-name {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.tx-item .tx-info .tx-desc {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
-.tx-item .tx-amount {
-  font-weight: 600;
-  font-size: 15px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.tx-item .tx-amount.income { color: var(--success); }
-.tx-item .tx-amount.expense { color: var(--danger); }
-
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.quick-action {
-  background: var(--bg-card);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  padding: 18px 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  color: var(--text-secondary);
-}
-
-.quick-action:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  color: var(--text-primary);
-}
-
-.quick-action i {
-  font-size: 22px;
-  color: var(--accent);
-  margin-bottom: 6px;
-  display: block;
-}
-
-.quick-action span {
-  font-size: 12px;
-  font-weight: 500;
-}
-
-input, textarea {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  width: 100%;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  font-family: 'Onest', sans-serif;
-}
-
-input:focus, textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(233, 177, 163, 0.1);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: 'DM Mono', monospace;
-}
-
-.badge-confirmed {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--success);
-}
-
-.badge-pending {
-  background: rgba(155, 155, 167, 0.15);
-  color: var(--text-secondary);
-}
-
-.badge-candidate {
-  background: rgba(245, 158, 11, 0.2);
-  color: var(--warning);
-}
-
-.bottom-nav {
-  display: none;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--glass-border);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  padding: 8px 12px env(safe-area-inset-bottom, 12px);
-  justify-content: space-around;
-  align-items: center;
-  height: var(--nav-height);
-}
-
-.bottom-nav a {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
-  transition: color 0.2s;
-  position: relative;
-}
-
-.bottom-nav a i {
-  font-size: 20px;
-}
-
-.bottom-nav a.active {
-  color: var(--accent);
-}
-
-.bottom-nav a.active::after {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 3px;
-  border-radius: 4px;
-  background: var(--accent);
-}
-
-.bottom-nav a .nav-label-mobile {
-  font-size: 9px;
-  letter-spacing: 0.2px;
-}
-
-.drawer-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.drawer-overlay.open {
-  opacity: 1;
-}
-
-.fab {
-  position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom, 0));
-  right: 16px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--bg-primary);
-  border: none;
-  box-shadow: 0 4px 16px rgba(233, 177, 163, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  z-index: 85;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-  opacity: 0;
-  transform: scale(0.8);
-  pointer-events: none;
-}
-
-.fab.visible {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
-}
-
-.fab:hover {
-  transform: scale(1.1);
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in { animation: fade-in 0.5s ease-out both; }
-.animate-slide-up { animation: slide-up 0.5s ease-out both; }
-
-@keyframes modal-enter {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.animate-modal-enter { animation: modal-enter 0.25s ease-out both; }
-
-.tabular-nums {
-  font-family: 'DM Mono', monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-::selection {
-  background: var(--accent);
-  color: var(--bg-primary);
-}
-
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
-
-@media (max-width: 1200px) {
-  .balance-grid { grid-template-columns: 1fr 1fr; }
-  .balance-grid .balance-card:first-child { grid-column: 1 / -1; }
-  .dashboard-grid { grid-template-columns: 1fr; }
-  .main-content { padding: 24px 24px 100px 24px; }
-}
-
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
-  .drawer-overlay { display: block; pointer-events: none; }
-  .drawer-overlay.open { pointer-events: auto; }
-  .bottom-nav { display: flex; }
-  .main-content { margin-left: 0; padding: 20px 16px 100px 16px; }
-  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
-  .page-header-left h2 { font-size: 22px; }
-  .page-header-actions { flex-wrap: wrap; }
-  .search-wrap input { width: 100%; }
-  .search-wrap { flex: 1; }
-  .balance-grid { grid-template-columns: 1fr; gap: 12px; }
-  .balance-grid .balance-card:first-child { grid-column: 1; }
-  .balance-card .amount { font-size: 28px; }
-  .stat-card .amount { font-size: 24px; }
-  .dashboard-grid { grid-template-columns: 1fr; gap: 16px; }
-  .quick-actions { grid-template-columns: repeat(2, 1fr); }
-  .chart-card .chart-header { flex-direction: column; align-items: stretch; gap: 10px; }
-  .chart-card .chart-header .chart-tabs { align-self: flex-start; }
-  .tx-item { padding: 10px 12px; }
-  .card { padding: 18px; }
-}
-
-@media (max-width: 400px) {
-  .balance-card { padding: 18px 20px; }
-  .balance-card .amount { font-size: 24px; }
-  .stat-card .amount { font-size: 20px; }
-  .quick-actions { gap: 10px; }
-  .quick-action { padding: 14px 10px; }
-  .quick-action i { font-size: 18px; }
-  .card { padding: 18px; }
-  .page-header-left h2 { font-size: 20px; }
-  .main-content { padding: 16px 12px 90px 12px; }
-}
+- Produces: `operationGroups`, `debts`, `tags`, `operationTags` tables; new columns on `operations`
+
+- [ ] **Step 1: Add new tables and modify operations in schema.ts**
+
+Open `src/db/schema.ts`. Add after the `users` table definition (before `accounts`):
+
+```typescript
+export const debts = sqliteTable("debts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  personName: text("person_name").notNull(),
+  description: text("description"),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("RUB"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+  settledAt: text("settled_at"),
+});
+
+export const operationGroups = sqliteTable("operation_groups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+});
+
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  color: text("color"),
+  description: text("description"),
+});
+
+export const operationTags = sqliteTable("operation_tags", {
+  operationId: integer("operation_id").notNull()
+    .references(() => operations.id, { onDelete: "cascade" }),
+  tagId: integer("tag_id").notNull()
+    .references(() => tags.id, { onDelete: "cascade" }),
+}, (table) => ({
+  pk: uniqueIndex("operation_tag_pk").on(table.operationId, table.tagId),
+}));
 ```
 
-- [ ] **Step 2: Add Font Awesome CDN to root layout**
+Modify the `operations` table — add new columns after `category`:
 
-Edit `src/app/layout.tsx`. Add the Font Awesome CDN link inside `<head>` and the aurora-bg div inside `<body>`:
+```typescript
+export const operations = sqliteTable("operations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  description: text("description"),
+  category: text("category"),            // ← keep for now, removed in Task 10
+  groupId: integer("group_id"),
+  customRate: real("custom_rate"),
+  customRateLabel: text("custom_rate_label"),
+  debtId: integer("debt_id").references(() => debts.id),
+  date: text("date").notNull(),
+  // ... keep all existing fields below untouched
+  source: text("source").notNull().default("manual"),
+  txHash: text("tx_hash"),
+  fromAddress: text("from_address"),
+  toAddress: text("to_address"),
+  blockTimestamp: integer("block_timestamp"),
+  status: text("status").notNull().default("draft"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+});
+```
 
-```tsx
-import type { Metadata } from "next";
-import "./globals.css";
-import { initializeApp } from "@/lib/init";
-import ClientSessionProvider from "@/components/ClientSessionProvider";
-import ToastProvider from "@/components/Toast";
-import Link from "next/link";
+- [ ] **Step 2: Add 'external' account type to accounts page icon/color mappings**
 
-initializeApp();
+In `src/app/(dashboard)/accounts/page.tsx`, add `external` to icon map (around line 28):
 
-export const metadata: Metadata = {
-  title: "FinTracker — учёт финансов",
-  description: "Личный финансовый учёт с поддержкой криптовалют, мультивалютных счетов и авто-сканирования кошельков",
+```typescript
+const ACCOUNT_ICONS: Record<string, string> = {
+  crypto_wallet: "fa-solid fa-coins",
+  cex_exchange: "fa-solid fa-building-columns",
+  broker: "fa-solid fa-chart-line",
+  hybrid_bank: "fa-solid fa-building-columns",
+  fiat_bank: "fa-solid fa-building-columns",
+  external: "fa-solid fa-hand-holding-dollar",     // ← add
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
-  return (
-    <html lang="ru">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-        />
-      </head>
-      <body>
-        <div className="aurora-bg" aria-hidden="true" />
-        <ClientSessionProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </ClientSessionProvider>
-      </body>
-    </html>
-  );
-}
 ```
 
-- [ ] **Step 3: Update dashboard layout**
-
-Edit `src/app/(dashboard)/layout.tsx` — reuse existing auth check, keep `<Navbar>` + `<main>`, remove `lg:ml-64` (handled by CSS now):
-
-```tsx
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import Navbar from "@/components/Navbar";
-
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-
-  return (
-    <>
-      <Navbar role={session.user.role} username={session.user.username} />
-      <main className="main-content">
-        {children}
-      </main>
-    </>
-  );
-}
+Add to `getAccountColor` function:
+```typescript
+case "external": return "amber";
 ```
 
-- [ ] **Step 4: Verify CSS builds**
+In `src/app/(dashboard)/accounts/new/page.tsx`, add `"external"` to the account types list:
+```typescript
+const types = ["crypto_wallet", "cex_exchange", "broker", "hybrid_bank", "fiat_bank", "external"] as const;
+```
 
-Run: `npm run dev` (or `npx next build` to check for errors)
-Expected: No CSS or build errors. Server starts on localhost:3000.
+- [ ] **Step 3: Add migration code in migrate.ts**
+
+Open `src/db/migrate.ts`. Bump `SCHEMA_VERSION` from 3 to 4.
+
+In the `runMigrations` function, add after the tokens section (before indexes):
+
+```typescript
+console.log("\n[operation_groups]");
+createTable(s, "operation_groups", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`);
+
+console.log("\n[debts]");
+createTable(s, "debts", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  person_name TEXT NOT NULL,
+  description TEXT,
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'RUB',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  settled_at TEXT
+)`);
+
+console.log("\n[tags]");
+createTable(s, "tags", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  color TEXT,
+  description TEXT
+)`);
+
+console.log("\n[operation_tags]");
+createTable(s, "operation_tags", `(
+  operation_id INTEGER NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
+)`);
+createIndex(s, "operation_tag_pk", "operation_tags", "operation_id, tag_id", true);
+
+console.log("\n[operations new columns]");
+addColumn(s, "operations", "group_id", "INTEGER");
+addColumn(s, "operations", "custom_rate", "REAL");
+addColumn(s, "operations", "custom_rate_label", "TEXT");
+addColumn(s, "operations", "debt_id", "INTEGER");
+```
+
+- [ ] **Step 4: Verify and commit**
+
+```bash
+npm run dev
+# Ctrl+C after it starts
+git add src/db/schema.ts src/db/migrate.ts src/app/\(dashboard\)/accounts/page.tsx src/app/\(dashboard\)/accounts/new/page.tsx
+git commit -m "feat: add schema for groups, debts, tags, operation_tags + migration v4 + external account type"
+```
 
 ---
-
+
+

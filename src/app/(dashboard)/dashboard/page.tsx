@@ -40,6 +40,14 @@ interface Operation {
   entries: OperationEntry[];
 }
 
+interface Debt {
+  id: number;
+  personName: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
+
 function getTxIcon(entries: OperationEntry[], source: string): { icon: string; color: string } {
   if (source.startsWith("scanner") || source.startsWith("api")) {
     const isIncoming = entries.some(e => e.amount > 0);
@@ -60,7 +68,7 @@ export default function DashboardPage() {
   const [baseCurrency, setBaseCurrency] = useState("RUB");
   const [showNewTx, setShowNewTx] = useState(false);
   const [period, setPeriod] = useState<"week" | "month" | "year">("week");
-  const [debtTotal, setDebtTotal] = useState(0);
+  const [debtsByCurrency, setDebtsByCurrency] = useState<Record<string, number>>({});
 
   function loadSummary(currency: string) {
     fetch(`/api/stats/summary?base_currency=${currency}`)
@@ -77,10 +85,13 @@ export default function DashboardPage() {
       .catch(() => {});
     fetch("/api/debts")
       .then(r => r.json())
-      .then((list: any[]) => {
-        const active = list.filter((d: any) => d.status === "active");
-        const total = active.reduce((s: number, d: any) => s + d.amount, 0);
-        setDebtTotal(total);
+      .then((list: Debt[]) => {
+        const active = list.filter(d => d.status === "active");
+        const byCurrency: Record<string, number> = {};
+        for (const d of active) {
+          byCurrency[d.currency] = (byCurrency[d.currency] || 0) + d.amount;
+        }
+        setDebtsByCurrency(byCurrency);
       })
       .catch(() => {});
   }, [baseCurrency]);
@@ -296,9 +307,14 @@ export default function DashboardPage() {
             <i className="fa-solid fa-scale-balanced" />
           </div>
           <div className="label">Долги</div>
-          <div className="amount mono">
-            <span className="currency">{baseCurrency === "RUB" ? "₽" : "$"}</span>
-            {debtTotal > 0 ? <AnimatedCounter value={debtTotal} /> : "—"}
+          <div className="amount mono" style={{ flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+            {Object.keys(debtsByCurrency).length > 0
+              ? Object.entries(debtsByCurrency).map(([cur, amt]) => (
+                  <span key={cur}>
+                    {amt.toLocaleString()} {cur}
+                  </span>
+                ))
+              : "—"}
           </div>
         </div>
       </section>
