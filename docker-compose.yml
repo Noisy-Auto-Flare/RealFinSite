@@ -8,12 +8,11 @@ services:
       - "127.0.0.1:5000:5000"
     environment:
       - HOSTNAME=0.0.0.0
-      - DATABASE_PATH=/data/finance.db
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUST_HOST=1
-      - DATABASE_URL=${DATABASE_URL:-/data/finance.db}
+      - DATABASE_URL=${DATABASE_URL:-/data/fintracker.db}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - MASTER_USERNAME=${MASTER_USERNAME:-admin}
       - MASTER_PASSWORD=${MASTER_PASSWORD}
