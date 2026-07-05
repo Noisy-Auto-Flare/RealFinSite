@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { exchangeRates } from "@/db/schema";
-import { getCurrentUserId, isMaster } from "@/lib/server-utils";
+import { getCurrentUserId, isMaster } from "@/lib/auth";
 import { fetchAndStoreRates } from "@/lib/rates/coingecko";
 
 export async function GET() {
@@ -34,3 +34,4 @@ export async function POST() {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
+

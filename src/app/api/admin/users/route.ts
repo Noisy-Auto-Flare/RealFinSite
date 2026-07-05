@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUserId, isMaster } from "@/lib/server-utils";
+import { getCurrentUserId, isMaster } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 
 export async function GET() {
@@ -69,3 +69,4 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }
+

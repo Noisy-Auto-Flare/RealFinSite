@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { operationEntries, operations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/lib/balances";
@@ -48,3 +48,4 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   return NextResponse.json(updated);
 }
+

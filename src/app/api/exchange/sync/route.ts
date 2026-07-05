@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { accounts, apiCredentials } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { getDecryptedCredentials as bybitCreds, syncAccount as bybitSync } from "@/lib/exchanges/bybit";
 import { getDecryptedCredentials as okxCreds, syncAccount as okxSync } from "@/lib/exchanges/okx";
 import { logAction } from "@/lib/action-log";
@@ -68,3 +68,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
+

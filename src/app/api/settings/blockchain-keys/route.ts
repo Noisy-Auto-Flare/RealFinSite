@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { blockchainApiKeys } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 
 function maskKey(key: string): string {
   if (key.length <= 4) return "****";
@@ -64,3 +64,4 @@ export async function PUT(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+

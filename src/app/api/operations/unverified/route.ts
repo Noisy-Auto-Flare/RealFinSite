@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { operations, operationEntries } from "@/db/schema";
 import { eq, and, inArray, desc } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -38,3 +38,4 @@ export async function GET() {
 
   return NextResponse.json({ operations: result });
 }
+

@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 
 export async function PATCH(request: Request) {
   const userId = await getCurrentUserId();
@@ -34,3 +34,4 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { balances, accounts, operations, operationEntries } from "@/db/schema";
 import { eq, and, gte, lte, inArray, sql, lt } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { convertAmount } from "@/lib/rates/coingecko";
 
 export async function GET(request: Request) {
@@ -126,3 +126,4 @@ export async function GET(request: Request) {
     periodTransactionCount: Number(periodTxCount?.count ?? 0),
   });
 }
+

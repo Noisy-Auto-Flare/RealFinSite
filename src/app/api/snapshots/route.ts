@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { balanceSnapshots, balances, accounts } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 
 export async function POST(request: Request) {
   const userId = await getCurrentUserId();
@@ -83,3 +83,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ snapshots });
 }
+

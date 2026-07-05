@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { accountAddresses, accounts } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { syncAddressBalance } from "@/lib/scanners/runner";
 import { recalculateAllBalances } from "@/lib/balances";
 import { markDirty } from "@/lib/beancount/dirty-flag";
@@ -50,3 +50,4 @@ export async function POST() {
 
   return NextResponse.json({ success: true, results });
 }
+

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { operations, operationEntries } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/lib/balances";
@@ -105,3 +105,4 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   return NextResponse.json({ success: true });
 }
+

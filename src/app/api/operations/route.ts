@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { operations, operationEntries, accounts } from "@/db/schema";
 import { eq, and, desc, gte, lte, like, sql, inArray } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/lib/balances";
@@ -169,3 +169,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ operations: result, total, page, limit });
 }
+

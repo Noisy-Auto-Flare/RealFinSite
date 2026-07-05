@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { balances, accounts } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { getCurrentUserId } from "@/lib/server-utils";
+import { getCurrentUserId } from "@/lib/auth";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -29,3 +29,4 @@ export async function GET() {
 
   return NextResponse.json({ balances: result });
 }
+
