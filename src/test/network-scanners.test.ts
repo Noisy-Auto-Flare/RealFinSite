@@ -190,12 +190,13 @@ describe("TonScanner", () => {
           ],
         }),
       },
-      // getJettonInfo — metadata
+      // getJettonMeta → v3 /jetton/masters — metadata
       {
         ok: true,
         json: () => Promise.resolve({
-          ok: true,
-          result: { decimals: 9, symbol: "JETTON" },
+          jetton_masters: [{
+            jetton_content: { decimals: 9, symbol: "JETTON" },
+          }],
         }),
       },
     ]);
