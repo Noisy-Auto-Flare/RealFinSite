@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { formatAmount } from "@/lib/formatting";
+import { formatAmount, formatCurrency } from "@/lib/formatting";
 import EmptyState from "@/components/EmptyState";
+import CurrencyPieChart from "@/components/ui/CurrencyPieChart";
+import AccountBalanceCard from "@/components/ui/AccountBalanceCard";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
 interface Balance {
@@ -41,9 +42,7 @@ interface OperationSummary {
   entries: { currency: string; amount: number; type: string }[];
 }
 
-const CHART_COLORS = ["#E9B1A3", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"];
 
-const baseSym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥" };
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -115,10 +114,10 @@ export default function DashboardPage() {
     }
     return Object.entries(byCurrency)
       .sort(([, a], [, b]) => b - a)
-      .map(([name, value], i) => ({ name, value, color: CHART_COLORS[i % CHART_COLORS.length] }));
+      .map(([currency, value]) => ({ currency, value }));
   }, [summary]);
 
-  const sym = (cur: string) => baseSym[cur] || cur;
+
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -157,16 +156,16 @@ export default function DashboardPage() {
           </div>
           <div className="text-3xl font-bold tabular-nums">
             {summary
-              ? <><AnimatedCounter value={summary.totalCapitalConverted} /> {sym(baseCurrency)}</>
+              ? <><AnimatedCounter value={summary.totalCapitalConverted} /> {formatCurrency(baseCurrency)}</>
               : "Загрузка..."}
           </div>
           {summary && (
             <div className="flex gap-4 mt-3 text-sm tabular-nums">
               <span className="text-[var(--success)]">
-                +<AnimatedCounter value={summary.incomeConverted} /> {sym(baseCurrency)}
+                +<AnimatedCounter value={summary.incomeConverted} /> {formatCurrency(baseCurrency)}
               </span>
               <span className="text-[var(--danger)]">
-                −<AnimatedCounter value={summary.expenseConverted} /> {sym(baseCurrency)}
+                −<AnimatedCounter value={summary.expenseConverted} /> {formatCurrency(baseCurrency)}
               </span>
             </div>
           )}
@@ -179,69 +178,21 @@ export default function DashboardPage() {
                 <span className="text-xs text-[var(--text-muted)]">✓ верифицировано</span>
               </div>
               <div className="text-2xl font-bold tabular-nums text-[var(--success)]">
-                <AnimatedCounter value={beancountSummary.totalCapital} /> {sym(beancountSummary.currency)}
+                <AnimatedCounter value={beancountSummary.totalCapital} /> {formatCurrency(beancountSummary.currency)}
               </div>
             </div>
           )}
 
         <div className="card md:col-span-2">
           <h2 className="font-medium mb-2">Распределение по валютам</h2>
-          {pieData.length > 0 ? (
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="w-[140px] h-[140px] md:w-[180px] md:h-[180px] shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} isAnimationActive={true}>
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ background: "rgba(21,21,30,0.96)", border: "1px solid var(--glass-border)", borderRadius: "8px", fontSize: "12px", color: "var(--text-primary)" }}
-                      formatter={(value: unknown) => `${Number(value).toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym(baseCurrency)}`}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-1 text-sm flex-1">
-                {pieData.map((entry) => (
-                  <div key={entry.name} className="flex justify-between">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
-                      {entry.name}
-                    </span>
-                    <span className="text-[var(--text-muted)]">
-                      {entry.value.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <EmptyState icon="💳" title="Нет данных" description="Добавьте счета для отслеживания балансов" />
-          )}
+          <CurrencyPieChart data={pieData} baseCurrency={baseCurrency} />
         </div>
       </div>
 
       {/* Account balances */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groupBalancesByAccount().map((group) => (
-          <Link key={group.name} href="/accounts" className="card block hover:border-[var(--accent)] transition-colors">
-            <div className="font-medium mb-2">{group.name}</div>
-            {group.balances.map((b) => (
-              <div key={b.currency} className="flex justify-between text-sm">
-                <span className="text-[var(--text-secondary)]">{b.currency}</span>
-                <span>
-                  {formatAmount(b.amount, b.currency)}
-                  {b.amountInBase !== null && b.currency !== baseCurrency && (
-                    <span className="text-[var(--text-muted)] ml-1 text-xs">
-                      (~{b.amountInBase.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} {sym(baseCurrency)})
-                    </span>
-                  )}
-                </span>
-              </div>
-            ))}
-          </Link>
+          <AccountBalanceCard key={group.name} name={group.name} balances={group.balances} baseCurrency={baseCurrency} href="/accounts" />
         ))}
       </div>
 
