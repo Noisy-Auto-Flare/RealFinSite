@@ -68,6 +68,7 @@ export default function DashboardPage() {
   const [baseCurrency, setBaseCurrency] = useState("RUB");
   const [showNewTx, setShowNewTx] = useState(false);
   const [period, setPeriod] = useState<"week" | "month" | "year">("week");
+  const [debtTotal, setDebtTotal] = useState(0);
 
   function loadSummary(currency: string) {
     fetch(`/api/stats/summary?base_currency=${currency}`)
@@ -81,6 +82,14 @@ export default function DashboardPage() {
     fetch("/api/operations?limit=5&page=1")
       .then(r => r.json())
       .then(data => setRecentTx(data.operations || []))
+      .catch(() => {});
+    fetch("/api/debts")
+      .then(r => r.json())
+      .then((list: any[]) => {
+        const active = list.filter((d: any) => d.status === "active");
+        const total = active.reduce((s: number, d: any) => s + d.amount, 0);
+        setDebtTotal(total);
+      })
       .catch(() => {});
   }, [baseCurrency]);
 
@@ -287,6 +296,17 @@ export default function DashboardPage() {
           <div className="amount mono">
             <span className="currency">{baseCurrency === "RUB" ? "₽" : "$"}</span>
             {summary ? <AnimatedCounter value={summary.expenseConverted} /> : "—"}
+          </div>
+        </div>
+
+        <div className="card stat-card">
+          <div className="stat-icon" style={{ background: "var(--danger-dim)" }}>
+            <i className="fa-solid fa-scale-balanced" />
+          </div>
+          <div className="label">Долги</div>
+          <div className="amount mono">
+            <span className="currency">{baseCurrency === "RUB" ? "₽" : "$"}</span>
+            {debtTotal > 0 ? <AnimatedCounter value={debtTotal} /> : "—"}
           </div>
         </div>
       </section>
