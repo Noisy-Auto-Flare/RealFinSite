@@ -14,7 +14,7 @@ export const NATIVE_CURRENCIES: Record<string, string> = {
   ton: "TON",
 };
 
-export async function runScannerCycle(): Promise<void> {
+export async function runScannerCycle(): Promise<{ eventsFound: number; addressesScanned: number }> {
   const allAddresses = db.select({
     addr: accountAddresses,
     account: accounts,
@@ -26,15 +26,16 @@ export async function runScannerCycle(): Promise<void> {
 
   if (allAddresses.length === 0) {
     console.log(`[scanner] ${new Date().toISOString()} no addresses to scan (is_auto_sync=1)`);
-    return;
+    return { eventsFound: 0, addressesScanned: 0 };
   }
 
   console.log(`[scanner] ${new Date().toISOString()} scanning ${allAddresses.length} address(es)...`);
 
+  let eventsFound = 0;
+
   for (const row of allAddresses) {
     const scanner = await getScanner(row.addr.network);
     if (!scanner) {
-      console.log(`[scanner]   ⚠ unsupported network "${row.addr.network}" for account "${row.account.name}", skipping`);
       continue;
     }
 
@@ -51,6 +52,7 @@ export async function runScannerCycle(): Promise<void> {
     }
 
     console.log(`[scanner]     found ${events.length} new transaction(s)`);
+    eventsFound += events.length;
 
     for (const evt of events) {
       await processEvent(evt, row.addr.address, row.addr.network, row.account.id, row.account.userId);
@@ -65,6 +67,8 @@ export async function runScannerCycle(): Promise<void> {
       .where(eq(accountAddresses.id, row.addr.id))
       .run();
   }
+
+  return { eventsFound, addressesScanned: allAddresses.length };
 }
 
 async function processEvent(
@@ -93,6 +97,7 @@ async function processEvent(
   } else {
     currency = nativeSymbol;
   }
+
   const humanAmount = parseFloat(evt.amount) / Math.pow(10, evt.decimals);
 
   if (humanAmount <= 0) return;
@@ -138,52 +143,47 @@ export async function syncAddressBalance(
   const result = await scanner.fetchAllBalances(address);
   if (!result) return null;
 
+  const sourceTag = `balance_sync:${addressId}`;
   const corrections: { currency: string; delta: number; correctionAmount: number | null }[] = [];
 
+  // Remove this address's previous tagged corrections
+  const oldOps = db.select({ id: operations.id }).from(operations)
+    .where(and(eq(operations.source, sourceTag), eq(operations.status, "confirmed"))).all();
+  for (const oldOp of oldOps) {
+    db.delete(operationEntries).where(eq(operationEntries.operationId, oldOp.id)).run();
+    db.delete(operations).where(eq(operations.id, oldOp.id)).run();
+  }
+
+  const acc = db.select({ userId: accounts.userId }).from(accounts).where(eq(accounts.id, accountId)).get();
+  const userId = acc?.userId ?? 0;
+
   for (const be of result.balances) {
+    const currency = be.currency;
     const blockchainBalance = parseFloat(be.balance) / Math.pow(10, be.decimals);
 
-    const existingOps = db.select({
-      total: sql<string>`COALESCE(SUM(${operationEntries.amount}), 0)`,
-    })
-      .from(operationEntries)
-      .innerJoin(operations, eq(operationEntries.operationId, operations.id))
-      .where(and(
-        eq(operationEntries.accountId, accountId),
-        eq(operationEntries.currency, be.currency),
-        eq(operations.status, "confirmed"),
-      ))
-      .get();
-
-    const existingSum = parseFloat(existingOps?.total || "0");
-    const delta = blockchainBalance - existingSum;
-
-    if (Math.abs(delta) < 0.000001) {
-      corrections.push({ currency: be.currency, delta, correctionAmount: null });
+    if (blockchainBalance <= 0.000001) {
+      corrections.push({ currency, delta: 0, correctionAmount: null });
       continue;
     }
 
-    const acc = db.select({ userId: accounts.userId }).from(accounts).where(eq(accounts.id, accountId)).get();
-    const userId = acc?.userId ?? 0;
-
     const op = db.insert(operations).values({
       userId,
-      description: `Balance sync (${be.currency}) — correction ${delta >= 0 ? "+" : ""}${delta.toFixed(6)}`,
+      description: `Balance sync (${currency})`,
       date: new Date().toISOString().split("T")[0],
-      source: "balance_correction",
+      source: sourceTag,
       status: "confirmed",
     }).returning().get();
 
     db.insert(operationEntries).values({
       operationId: op.id,
       accountId,
-      currency: be.currency,
-      amount: delta,
+      currency,
+      amount: blockchainBalance,
       type: "principal",
       isVerified: 1,
     }).run();
 
-    corrections.push({ currency: be.currency, delta, correctionAmount: delta });
+    corrections.push({ currency, delta: blockchainBalance, correctionAmount: blockchainBalance });
   }
 
   markDirty();
