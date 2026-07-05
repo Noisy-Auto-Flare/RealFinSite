@@ -40,6 +40,7 @@ export default function TransactionsPage() {
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     setPage(0);
@@ -107,6 +108,24 @@ export default function TransactionsPage() {
     loadTxs();
   }
 
+  async function handleScan() {
+    setScanning(true);
+    try {
+      const res = await fetch("/api/scanner/run", { method: "POST" });
+      const data = await res.json();
+      if (data.eventsFound > 0) {
+        toast.success(`Найдено ${data.eventsFound} новых транзакций`);
+      } else {
+        toast.info("Новых транзакций не найдено");
+      }
+      loadTxs();
+    } catch {
+      toast.error("Ошибка сканирования");
+    } finally {
+      setScanning(false);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex justify-between items-center flex-wrap gap-2">
@@ -150,6 +169,9 @@ export default function TransactionsPage() {
       </div>
 
       {/* Transaction list */}
+      <button onClick={handleScan} disabled={scanning} className="btn btn-ghost text-sm w-full md:w-auto">
+        {scanning ? "Проверка..." : "Проверить новые транзакции"}
+      </button>
       <div className="card">
         {loading ? (
           <p className="text-[var(--text-muted)]">Загрузка...</p>
