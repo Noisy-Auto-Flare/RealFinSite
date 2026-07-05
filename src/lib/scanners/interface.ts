@@ -20,6 +20,7 @@ export interface BalanceEntry {
   currency: string;
   balance: string;
   decimals: number;
+  tokenContract?: string;
 }
 
 export interface AllBalancesResult {

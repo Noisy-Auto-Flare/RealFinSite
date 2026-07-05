@@ -160,6 +160,33 @@ export class EvmScanner implements IScanner {
       blockNumber: native.blockNumber,
     };
     console.log(`${tag} ${this.config.nativeSymbol}: ${parseInt(native.balance) / 10 ** native.decimals}`);
+
+    const apiKey = this.getApiKey();
+    try {
+      const tokUrl = `${this.config.apiUrl}?module=account&action=tokenlist&address=${address}&apikey=${apiKey}`;
+      const tokRes = await fetch(tokUrl, { signal: AbortSignal.timeout(15000) });
+      if (tokRes.ok) {
+        const tokData: { status: string; result: Array<{ contractAddress: string; symbol: string; balance: string; decimals: string }> } = await tokRes.json();
+        if (tokData.status === "1" && Array.isArray(tokData.result)) {
+          for (const tok of tokData.result) {
+            const bal = tok.balance || "0";
+            if (bal !== "0") {
+              result.balances.push({
+                currency: tok.symbol,
+                balance: bal,
+                decimals: parseInt(tok.decimals, 10) || 18,
+                tokenContract: tok.contractAddress,
+              });
+            }
+          }
+          console.log(`${tag} ${result.balances.length - 1} tokens found`);
+        }
+      }
+    } catch (e) {
+      console.log(`${tag} token fetch failed:`, e);
+    }
+
+    console.log(`${tag} total balances: ${result.balances.length}`);
     return result;
   }
 }
