@@ -53,6 +53,12 @@ export default function TransactionsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showNewTx, setShowNewTx] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("search");
+    if (q) setSearchQuery(q);
+  }, []);
+
   const [editTx, setEditTx] = useState<OperationSummary | null>(null);
   const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");

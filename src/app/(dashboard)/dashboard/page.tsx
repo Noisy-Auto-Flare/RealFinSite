@@ -230,7 +230,7 @@ export default function DashboardPage() {
         <div className="page-header-actions">
           <div className="search-wrap">
             <i className="fa-solid fa-search" />
-            <input type="text" placeholder="Поиск транзакций..." />
+            <input type="text" placeholder="Поиск транзакций..." onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) { window.location.href = `/transactions?search=${encodeURIComponent((e.target as HTMLInputElement).value.trim())}`; } }} />
           </div>
           <div className="flex gap-1 bg-[var(--bg-card)] rounded-lg p-0.5">
             {["RUB", "USD"].map((cur) => (
