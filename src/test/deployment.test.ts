@@ -350,9 +350,9 @@ describe("docker-compose.yml validation", () => {
     expect(compose).toContain("fintracker_backups:");
   });
 
-  it("should set DATABASE_URL to /data/finance.db", () => {
+  it("should set DATABASE_URL to /data/fintracker.db", () => {
     const compose = fs.readFileSync("docker-compose.yml", "utf-8");
-    expect(compose).toContain("/data/finance.db");
+    expect(compose).toContain("/data/fintracker.db");
   });
 
   it("should set resource limits", () => {
