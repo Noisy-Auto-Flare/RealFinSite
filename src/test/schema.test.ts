@@ -44,7 +44,6 @@ function createTestDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id),
       description TEXT,
-      category TEXT,
       date TEXT NOT NULL,
       source TEXT NOT NULL DEFAULT 'manual',
       tx_hash TEXT,
@@ -52,6 +51,10 @@ function createTestDb() {
       to_address TEXT,
       block_timestamp INTEGER,
       status TEXT NOT NULL DEFAULT 'draft',
+      group_id INTEGER,
+      custom_rate REAL,
+      custom_rate_label TEXT,
+      debt_id INTEGER,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE operation_entries (
@@ -134,14 +137,12 @@ describe("Schema", () => {
     const op = db.insert(schema.operations).values({
       userId: user.id,
       description: "Test operation",
-      category: "income",
       date: new Date().toISOString(),
       source: "manual",
       status: "draft",
     }).returning().get();
 
     expect(op.description).toBe("Test operation");
-    expect(op.category).toBe("income");
     expect(op.status).toBe("draft");
   });
 

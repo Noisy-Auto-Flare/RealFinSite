@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { accounts, operations } from "@/db/schema";
-import { and, isNotNull, ne, sql, eq } from "drizzle-orm";
+import { accounts, operations, tags, operationTags } from "@/db/schema";
+import { sql, eq } from "drizzle-orm";
 
 export interface AccountInfo {
   id: number;
@@ -46,16 +46,14 @@ export function getAllAccountsInfo(): AccountInfo[] {
 
 export function getUniqueCategories(): { category: string; count: number }[] {
   return db.select({
-    category: operations.category,
+    category: tags.name,
     count: sql<number>`COUNT(*)`,
   })
-    .from(operations)
-    .where(and(
-      isNotNull(operations.category),
-      ne(operations.category, ""),
-      eq(operations.status, "confirmed"),
-    ))
-    .groupBy(operations.category)
+    .from(tags)
+    .innerJoin(operationTags, eq(tags.id, operationTags.tagId))
+    .innerJoin(operations, eq(operationTags.operationId, operations.id))
+    .where(eq(operations.status, "confirmed"))
+    .groupBy(tags.name)
     .orderBy(sql`COUNT(*) DESC`)
     .all() as { category: string; count: number }[];
 }

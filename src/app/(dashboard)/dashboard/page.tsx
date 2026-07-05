@@ -34,14 +34,13 @@ interface OperationEntry {
 interface Operation {
   id: number;
   description: string | null;
-  category: string | null;
   date: string;
   source: string;
   status: string;
   entries: OperationEntry[];
 }
 
-function getTxIcon(entries: OperationEntry[], source: string, category: string | null): { icon: string; color: string } {
+function getTxIcon(entries: OperationEntry[], source: string): { icon: string; color: string } {
   if (source.startsWith("scanner") || source.startsWith("api")) {
     const isIncoming = entries.some(e => e.amount > 0);
     const isOutgoing = entries.some(e => e.amount < 0);
@@ -49,17 +48,10 @@ function getTxIcon(entries: OperationEntry[], source: string, category: string |
     if (isOutgoing && !isIncoming) return { icon: "fa-solid fa-arrow-trend-down", color: "red" };
     return { icon: "fa-solid fa-arrow-right-arrow-left", color: "purple" };
   }
-  switch (category) {
-    case "Зарплата": return { icon: "fa-solid fa-briefcase", color: "green" };
-    case "Продукты": return { icon: "fa-solid fa-bag-shopping", color: "blue" };
-    case "Транспорт": return { icon: "fa-solid fa-car", color: "orange" };
-    case "Ресторан": case "Продукты": return { icon: "fa-solid fa-utensils", color: "orange" };
-    default:
-      const isIncoming = entries.some(e => e.amount > 0);
-      return isIncoming
-        ? { icon: "fa-solid fa-circle-plus", color: "green" }
-        : { icon: "fa-solid fa-circle-minus", color: "red" };
-  }
+  const isIncoming = entries.some(e => e.amount > 0);
+  return isIncoming
+    ? { icon: "fa-solid fa-circle-plus", color: "green" }
+    : { icon: "fa-solid fa-circle-minus", color: "red" };
 }
 
 export default function DashboardPage() {
@@ -364,15 +356,15 @@ export default function DashboardPage() {
           ) : (
             <div className="tx-list">
               {recentTx.map((tx) => {
-                const { icon, color } = getTxIcon(tx.entries, tx.source, tx.category);
+                const { icon, color } = getTxIcon(tx.entries, tx.source);
                 const totalAmount = tx.entries.reduce((s, e) => s + e.amount, 0);
                 const desc = tx.entries.map(e => `${e.amount > 0 ? "+" : ""}${e.amount} ${e.currency}`).join(" · ");
                 return (
                   <div key={tx.id} className="tx-item">
                     <div className={`tx-icon ${color}`}><i className={icon} /></div>
                     <div className="tx-info">
-                      <div className="tx-name">{tx.description || tx.category || "Операция"}</div>
-                      <div className="tx-desc">{tx.category ? `${tx.category} · ` : ""}{new Date(tx.date).toLocaleDateString("ru-RU")}</div>
+                      <div className="tx-name">{tx.description || "Операция"}</div>
+                      <div className="tx-desc">{new Date(tx.date).toLocaleDateString("ru-RU")}</div>
                     </div>
                     <div className={`tx-amount mono ${totalAmount > 0 ? "income" : "expense"}`}>
                       {totalAmount > 0 ? "+" : ""}{totalAmount.toFixed(2)}

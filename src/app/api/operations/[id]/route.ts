@@ -46,7 +46,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  const allowedFields = ["description", "category", "date", "status", "groupId", "debtId", "customRate", "customRateLabel"] as const;
+  const allowedFields = ["description", "date", "status", "groupId", "debtId", "customRate", "customRateLabel"] as const;
   const updates: Record<string, unknown> = {};
 
   for (const field of allowedFields) {

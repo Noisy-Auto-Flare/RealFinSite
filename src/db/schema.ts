@@ -75,7 +75,6 @@ export const operations = sqliteTable("operations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   description: text("description"),
-  category: text("category"),
   groupId: integer("group_id"),
   customRate: real("custom_rate"),
   customRateLabel: text("custom_rate_label"),

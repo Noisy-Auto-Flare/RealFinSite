@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  const { description, category, date, entries, status, groupId, debtId, customRate, customRateLabel, tags: tagNames } = body;
+  const { description, date, entries, status, groupId, debtId, customRate, customRateLabel, tags: tagNames } = body;
 
   if (!date || !entries || !Array.isArray(entries) || entries.length === 0) {
     return NextResponse.json({ error: "date and entries are required" }, { status: 400 });
@@ -36,7 +36,6 @@ export async function POST(request: Request) {
   const op = db.insert(operations).values({
     userId,
     description: description || null,
-    category: category || null,
     groupId: groupId || null,
     customRate: customRate || null,
     customRateLabel: customRateLabel || null,
@@ -118,7 +117,7 @@ export async function POST(request: Request) {
     action: "create",
     entityType: "operation",
     entityId: op.id,
-    details: `${category || "uncategorized"} operation with ${finalEntries.length} entries${tagNames?.length ? `, tags: ${tagNames.join(", ")}` : ""}`,
+    details: `operation with ${finalEntries.length} entries${tagNames?.length ? `, tags: ${tagNames.join(", ")}` : ""}`,
   });
 
   const created = db.select().from(operations).where(eq(operations.id, op.id)).get();
@@ -146,14 +145,12 @@ export async function GET(request: Request) {
   const limit = parseInt(searchParams.get("limit") || "50", 10);
   const dateFrom = searchParams.get("date_from");
   const dateTo = searchParams.get("date_to");
-  const category = searchParams.get("category");
   const status = searchParams.get("status");
   const searchQ = searchParams.get("search");
 
   const conditions = [eq(operations.userId, userId)];
   if (dateFrom) conditions.push(gte(operations.date, dateFrom));
   if (dateTo) conditions.push(lte(operations.date, dateTo));
-  if (category) conditions.push(eq(operations.category, category));
   if (status) conditions.push(eq(operations.status, status));
   if (searchQ) conditions.push(like(operations.description, `%${searchQ}%`));
 

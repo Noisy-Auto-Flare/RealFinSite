@@ -6,7 +6,6 @@ import { formatAmount } from "@/lib/formatting";
 interface OperationSummary {
   id: number;
   description: string | null;
-  category: string | null;
   date: string;
   source: string;
   status: string;
@@ -36,7 +35,6 @@ export default memo(function TransactionRow({ tx, onEdit, onDelete }: Transactio
           <div className="text-sm truncate">{tx.entries?.map(e => formatAmount(e.amount, e.currency)).join(", ") || "—"}</div>
           <div className="text-xs text-[var(--text-muted)] truncate">
             {new Date(tx.date).toLocaleDateString("ru-RU")}
-            {tx.category && <span> · {tx.category}</span>}
             {tx.source.startsWith("scanner") && <span> · авто</span>}
             {tx.source === "api_bybit" && <span> · bybit</span>}
           </div>

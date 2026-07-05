@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       .all();
     return {
       date: op.date,
-      payee: op.category || "Unknown",
+      payee: op.description || "Unknown",
       narration: op.description || "",
       postings: entries.map(e => ({
         account: `Assets:FinTracker:User${op.userId}:${e.accountId}:${e.currency}`,

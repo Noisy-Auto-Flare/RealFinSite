@@ -85,7 +85,6 @@ export function regenerate(): void {
     id: operations.id,
     userId: operations.userId,
     description: operations.description,
-    category: operations.category,
     date: operations.date,
   })
     .from(operations)

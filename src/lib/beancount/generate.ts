@@ -4,7 +4,6 @@ export interface OperationRow {
   id: number;
   userId: number;
   description: string | null;
-  category: string | null;
   date: string;
 }
 
@@ -23,7 +22,7 @@ function formatAmount(amount: number): string {
 
 export function operationToBeancount(op: OperationRow, entries: EntryRow[]): string {
   const lines: string[] = [];
-  const payee = op.category || "Unknown";
+  const payee = op.description || "Unknown";
   const narration = (op.description || "").replace(/"/g, "'");
   lines.push(`${op.date} * "${payee}" "${narration}"`);
 
@@ -41,12 +40,12 @@ export function operationToBeancount(op: OperationRow, entries: EntryRow[]): str
 
     if (e.amount >= 0) {
       // Positive → incoming, offset is income
-      const inc = incomePath(op.category || "Unknown");
+      const inc = incomePath(op.description || "Unknown");
       postings.push(`  ${inc}  ${formatAmount(-e.amount)} ${e.currency}`);
       total -= e.amount;
     } else {
       // Negative → outgoing, offset is expense (positive)
-      const exp = expensePath(op.category || "Unknown");
+      const exp = expensePath(op.description || "Unknown");
       postings.push(`  ${exp}  ${formatAmount(Math.abs(e.amount))} ${e.currency}`);
       total += Math.abs(e.amount);
     }

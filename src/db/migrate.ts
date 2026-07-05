@@ -15,7 +15,7 @@ const sqlite = new DatabaseClass(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function getSchemaVersion(s: Database): number {
   try {
@@ -418,6 +418,27 @@ export function runMigrations(sqlitep?: Database): void {
   is_dirty INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT
 )`);
+
+  console.log("\n[migrate categories to tags]");
+  const cats = s.prepare(
+    "SELECT DISTINCT category FROM operations WHERE category IS NOT NULL AND category != ''"
+  ).all() as { category: string }[];
+
+  for (const { category } of cats) {
+    const existing = s.prepare("SELECT id FROM tags WHERE name = ?").get(category);
+    if (!existing) {
+      s.prepare("INSERT INTO tags (name, color, description) VALUES (?, NULL, ?)")
+        .run(category, `Migrated from category "${category}"`);
+    }
+    const tagId = (s.prepare("SELECT id FROM tags WHERE name = ?").get(category) as any).id;
+    const ops = s.prepare("SELECT id FROM operations WHERE category = ?").all(category) as { id: number }[];
+    for (const op of ops) {
+      s.prepare(
+        "INSERT OR IGNORE INTO operation_tags (operation_id, tag_id) VALUES (?, ?)"
+      ).run(op.id, tagId);
+    }
+  }
+  console.log(`  ✓ migrated ${cats.length} categories to tags`);
 
   ensureSchemaVersion(s);
 

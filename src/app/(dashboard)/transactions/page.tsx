@@ -10,20 +10,13 @@ import NewTransactionModal from "@/components/NewTransactionModal";
 interface OperationSummary {
   id: number;
   description: string | null;
-  category: string | null;
   date: string;
   source: string;
   status: string;
   entries: { currency: string; amount: number; type: string }[];
 }
 
-const CATEGORIES = [
-  "", "Зарплата", "Продукты", "Транспорт", "Комиссия",
-  "Перевод маме", "Перевод другому", "Обмен",
-  "Вывод с биржи", "Пополнение", "Другое",
-];
-
-function getTxIcon(entries: { amount: number }[], source: string, category: string | null): string {
+function getTxIcon(entries: { amount: number }[], source: string): string {
   if (source.startsWith("scanner") || source.startsWith("api")) {
     const isIncoming = entries.some(e => e.amount > 0);
     if (isIncoming) return "fa-solid fa-arrow-trend-up";
@@ -48,7 +41,6 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0);
 
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showNewTx, setShowNewTx] = useState(false);
@@ -63,12 +55,11 @@ export default function TransactionsPage() {
   }, []);
 
   const [editTx, setEditTx] = useState<OperationSummary | null>(null);
-  const [editCategory, setEditCategory] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
 
-  useEffect(() => { setPage(0); }, [filterStatus, filterCategory, searchQuery]);
+  useEffect(() => { setPage(0); }, [filterStatus, searchQuery]);
 
   useEffect(() => {
     fetch("/api/groups").then(r => r.json()).then((list) => {
@@ -86,7 +77,7 @@ export default function TransactionsPage() {
       .catch(() => {});
   }, [expandedGroupId]);
 
-  useEffect(() => { loadTxs(); }, [page, filterStatus, filterCategory, searchQuery]);
+  useEffect(() => { loadTxs(); }, [page, filterStatus, searchQuery]);
 
   function loadTxs() {
     setLoading(true);
@@ -94,7 +85,6 @@ export default function TransactionsPage() {
     params.set("limit", String(limit));
     params.set("page", String(page + 1));
     if (filterStatus) params.set("status", filterStatus);
-    if (filterCategory) params.set("category", filterCategory);
     if (searchQuery) params.set("search", searchQuery);
 
     fetch(`/api/operations?${params.toString()}`)
@@ -111,7 +101,6 @@ export default function TransactionsPage() {
 
   function openEdit(tx: OperationSummary) {
     setEditTx(tx);
-    setEditCategory(tx.category || "");
     setEditDescription(tx.description || "");
   }
 
@@ -121,7 +110,7 @@ export default function TransactionsPage() {
     const res = await fetch(`/api/operations/${editTx.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category: editCategory, description: editDescription }),
+      body: JSON.stringify({ description: editDescription }),
     });
     setSaving(false);
     setEditTx(null);
@@ -194,13 +183,6 @@ export default function TransactionsPage() {
               <option value="pending">Черновики</option>
             </Select>
 
-            <Select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="w-auto min-w-[150px]">
-              <option value="">Все категории</option>
-              {CATEGORIES.filter(Boolean).map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
-
             <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
               {total} операций
             </span>
@@ -230,13 +212,13 @@ export default function TransactionsPage() {
           <div className="tx-list">
             {txs.map((tx) => {
               const totalAmount = tx.entries.reduce((s, e) => s + e.amount, 0);
-              const icon = getTxIcon(tx.entries, tx.source, tx.category);
+              const icon = getTxIcon(tx.entries, tx.source);
               const color = getTxColor(tx.entries);
               return (
                 <div key={tx.id} className="tx-item" onClick={() => openEdit(tx)}>
                   <div className={`tx-icon ${color}`}><i className={icon} /></div>
                   <div className="tx-info">
-                    <div className="tx-name">{tx.description || tx.category || "Операция"}</div>
+                    <div className="tx-name">{tx.description || "Операция"}</div>
                     <div className="tx-desc">
                       {new Date(tx.date).toLocaleDateString("ru-RU")}
                       {tx.status === "draft" && <span className="badge badge-pending" style={{ marginLeft: "8px" }}>Черновик</span>}
@@ -287,7 +269,7 @@ export default function TransactionsPage() {
             {groupOperations.map((gop: any) => (
               <div key={gop.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
                 <div className="flex items-center gap-2">
-                  <i className={`fa-solid ${getTxIcon(gop.entries, gop.source, null)} ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"} text-sm`} />
+                  <i className={`fa-solid ${getTxIcon(gop.entries, gop.source)} ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"} text-sm`} />
                   <div>
                     <p className="text-sm text-[var(--text-primary)]">{gop.description || "—"}</p>
                     <p className="text-[11px] text-[var(--text-muted)]">{gop.date}</p>
@@ -340,16 +322,6 @@ export default function TransactionsPage() {
 
             <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
               <p>{editTx.entries?.map(e => formatAmount(e.amount, e.currency)).join(" | ") || "—"}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm mb-1" style={{ fontWeight: 500 }}>Категория</label>
-              <Select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
-                <option value="">Без категории</option>
-                {CATEGORIES.filter(Boolean).map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </Select>
             </div>
 
             <div>
