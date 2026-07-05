@@ -100,12 +100,30 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
   const [allTags, setAllTags] = useState<{ id: number; name: string; color: string | null }[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  const [groups, setGroups] = useState<{ id: number; firstOpDescription: string | null; opCount: number }[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [createNewGroup, setCreateNewGroup] = useState(false);
+
+  const [debts, setDebts] = useState<{ id: number; personName: string; amount: number; currency: string; status: string }[]>([]);
+  const [selectedDebtId, setSelectedDebtId] = useState<number | null>(null);
+  const [isLoanGiven, setIsLoanGiven] = useState(false);
+  const [loanPersonName, setLoanPersonName] = useState("");
+  const [loanDescription, setLoanDescription] = useState("");
+
   useEffect(() => {
     fetch("/api/accounts").then((r) => r.json()).then(setAccounts);
   }, []);
 
   useEffect(() => {
     fetch("/api/tags").then(r => r.json()).then(setAllTags).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/groups").then(r => r.json()).then(setGroups).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/debts").then(r => r.json()).then(setDebts).catch(() => {});
   }, []);
 
   function addEntry() {
@@ -131,11 +149,11 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
     setLoading(true);
     setError("");
 
-    const body = {
+    const body: Record<string, unknown> = {
+      description,
       date,
-      description: description || null,
-      tags: selectedTags,
       status: "confirmed",
+      tags: selectedTags,
       entries: entries.map((e) => ({
         accountId: Number(e.accountId),
         currency: e.currency,
@@ -143,6 +161,30 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
         type: e.type,
       })),
     };
+
+    if (selectedGroupId) body.groupId = selectedGroupId;
+    if (createNewGroup) {
+      const groupRes = await fetch("/api/groups", { method: "POST" });
+      const groupData = await groupRes.json();
+      body.groupId = groupData.id;
+    }
+    if (selectedDebtId) {
+      body.debtId = selectedDebtId;
+    } else if (isLoanGiven && loanPersonName) {
+      const totalAmount = Math.abs(entries.reduce((s: number, e: Entry) => s + Number(e.amount || 0), 0));
+      const debtRes = await fetch("/api/debts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personName: loanPersonName,
+          description: loanDescription || `${description || "Долг"}`,
+          amount: totalAmount,
+          currency: entries[0]?.currency || "RUB",
+        }),
+      });
+      const debtData = await debtRes.json();
+      body.debtId = debtData.id;
+    }
 
     const res = await fetch("/api/operations", {
       method: "POST",
@@ -210,6 +252,12 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
     setDate(new Date().toISOString().split("T")[0]);
     setDescription("");
     setSelectedTags([]);
+    setSelectedGroupId(null);
+    setCreateNewGroup(false);
+    setSelectedDebtId(null);
+    setIsLoanGiven(false);
+    setLoanPersonName("");
+    setLoanDescription("");
     setEntries([{ accountId: "", currency: "RUB", amount: "", type: "principal" }]);
     setError("");
     setStep(0);
@@ -348,6 +396,77 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Группа</label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="form-input flex-1"
+                      value={selectedGroupId ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "__new__") {
+                          setCreateNewGroup(true);
+                          setSelectedGroupId(null);
+                        } else {
+                          setSelectedGroupId(val ? Number(val) : null);
+                          setCreateNewGroup(false);
+                        }
+                      }}
+                    >
+                      <option value="">— Без группы —</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.firstOpDescription || `Группа #${g.id}`} ({g.opCount} оп.)
+                        </option>
+                      ))}
+                      <option value="__new__">+ Новая группа</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <input type="checkbox" checked={isLoanGiven} onChange={(e) => setIsLoanGiven(e.target.checked)} className="mr-2" />
+                    Операция с долгом
+                  </label>
+                  {isLoanGiven && (
+                    <div className="mt-2 space-y-2 pl-4 border-l-2 border-[var(--accent)]/30">
+                      {selectedDebtId === null && (
+                        <>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Имя человека"
+                            value={loanPersonName}
+                            onChange={(e) => setLoanPersonName(e.target.value)}
+                          />
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="Заметка (необязательно)"
+                            value={loanDescription}
+                            onChange={(e) => setLoanDescription(e.target.value)}
+                          />
+                        </>
+                      )}
+                      {debts.filter(d => d.status === "active").length > 0 && (
+                        <select
+                          className="form-input"
+                          value={selectedDebtId ?? ""}
+                          onChange={(e) => setSelectedDebtId(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">— Создать новый долг —</option>
+                          {debts.filter(d => d.status === "active").map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.personName} — {d.amount} {d.currency}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             )}
