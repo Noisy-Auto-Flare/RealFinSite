@@ -13,7 +13,7 @@ export default async function DashboardLayout({
   return (
     <>
       <Navbar role={session.user.role} username={session.user.username} />
-      <main className="p-6 lg:ml-64">
+      <main className="main-content">
         {children}
       </main>
     </>
