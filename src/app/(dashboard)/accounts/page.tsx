@@ -24,6 +24,29 @@ interface Account {
   credentials: CredentialInfo | null;
 }
 
+const TYPE_ICONS: Record<string, string> = {
+  crypto_wallet: "fa-solid fa-coins",
+  cex_exchange: "fa-solid fa-building-columns",
+  broker: "fa-solid fa-chart-line",
+  hybrid_bank: "fa-solid fa-landmark",
+  fiat_bank: "fa-solid fa-building-columns",
+};
+
+function getTypeIcon(type: string): string {
+  return TYPE_ICONS[type] || "fa-solid fa-wallet";
+}
+
+function getTypeColor(type: string): string {
+  switch (type) {
+    case "crypto_wallet": return "purple";
+    case "cex_exchange": return "blue";
+    case "broker": return "green";
+    case "hybrid_bank": return "orange";
+    case "fiat_bank": return "blue";
+    default: return "blue";
+  }
+}
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +55,8 @@ export default function AccountsPage() {
 
   useEffect(() => {
     fetch("/api/accounts")
-      .then((r) => r.json())
-      .then((data) => { setAccounts(data); setLoading(false); });
+      .then(r => r.json())
+      .then(data => { setAccounts(data); setLoading(false); });
   }, []);
 
   async function handleSync() {
@@ -45,88 +68,90 @@ export default function AccountsPage() {
       const allCorrections = (data.results || []).flatMap((r: any) =>
         (r.corrections || []).filter((c: any) => c.correctionAmount != null)
       );
-      setSyncMsg(`Synced ${data.results?.length || 0} wallets, ${allCorrections.length} balance corrections`);
-      // re-fetch accounts to update displayed balances
+      setSyncMsg(`Синхронизировано ${data.results?.length || 0} кошельков, ${allCorrections.length} корректировок`);
       const accRes = await fetch("/api/accounts");
-      const accData = await accRes.json();
-      setAccounts(accData);
+      setAccounts(await accRes.json());
     } catch {
-      setSyncMsg("Sync failed");
+      setSyncMsg("Ошибка синхронизации");
     } finally {
       setSyncing(false);
     }
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex justify-between items-center gap-2 flex-wrap">
-        <h1 className="text-xl md:text-2xl font-bold truncate min-w-0">Счета</h1>
-        <div className="flex items-center gap-2 shrink-0">
+    <>
+      <header className="page-header">
+        <div className="page-header-left">
+          <h2>Счета</h2>
+          <p>Все ваши кошельки и счета</p>
+        </div>
+        <div className="page-header-actions">
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="btn btn-ghost text-sm"
+            className="btn-primary"
+            style={{ background: "var(--bg-card)", color: "var(--text-secondary)" }}
           >
-            {syncing ? "Syncing..." : "Sync balances"}
+            <i className="fa-solid fa-rotate" />
+            {syncing ? "Синхронизация..." : "Синхронизировать"}
           </button>
-          <Link href="/accounts/new" className="btn btn-primary text-sm md:text-base shrink-0">
-            + Добавить счёт
+          <Link href="/accounts/new" className="btn-primary">
+            <i className="fa-solid fa-plus" /> Добавить счёт
           </Link>
         </div>
-      </div>
+      </header>
+
       {syncMsg && (
-        <div className="text-sm text-[var(--accent)]">{syncMsg}</div>
+        <div className="card" style={{ marginBottom: "16px", padding: "12px 16px" }}>
+          <p style={{ fontSize: "13px", color: "var(--accent)" }}>{syncMsg}</p>
+        </div>
       )}
 
       {loading ? (
-        <p className="text-[var(--text-muted)]">Загрузка...</p>
+        <p style={{ color: "var(--text-muted)" }}>Загрузка...</p>
       ) : accounts.length === 0 ? (
-        <div className="card text-center py-12">
-          <div className="text-4xl mb-3">💳</div>
-          <p className="text-[var(--text-secondary)] mb-4">У вас ещё нет счетов</p>
-          <Link href="/accounts/new" className="btn btn-primary">
-            Создать первый счёт
+        <div className="card" style={{ textAlign: "center", padding: "48px 24px" }}>
+          <i className="fa-solid fa-wallet" style={{ fontSize: "48px", color: "var(--text-muted)", marginBottom: "16px" }} />
+          <p style={{ color: "var(--text-secondary)", marginBottom: "16px" }}>У вас ещё нет счетов</p>
+          <Link href="/accounts/new" className="btn-primary">
+            <i className="fa-solid fa-plus" /> Создать первый счёт
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-            {accounts.map((acc) => {
-            const icon = ACCOUNT_TYPE_ICONS[acc.type] || "💳";
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px" }}>
+          {accounts.map((acc) => {
+            const icon = getTypeIcon(acc.type);
+            const color = getTypeColor(acc.type);
             const label = ACCOUNT_TYPE_LABELS[acc.type] || acc.type;
-
             return (
-              <Link key={acc.id} href={`/accounts/${acc.id}`} className="block card hover:border-[var(--accent)] transition-colors">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="min-w-0 overflow-hidden">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl shrink-0">{icon}</span>
-                      <div className="min-w-0 overflow-hidden">
-                        <span className="font-medium truncate block">{acc.name}</span>
-                        <span className="text-xs text-[var(--text-muted)]">{label}</span>
+              <Link key={acc.id} href={`/accounts/${acc.id}`} className="card" style={{ cursor: "pointer", transition: "border-color 0.2s" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                  <div style={{ minWidth: 0, overflow: "hidden", flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div className={`tx-icon ${color}`}><i className={icon} /></div>
+                      <div style={{ minWidth: 0, overflow: "hidden" }}>
+                        <div style={{ fontWeight: 500, fontSize: "14px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.name}</div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{label}</div>
                       </div>
                     </div>
-
-                    <div className="mt-2 space-y-1">
+                    <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                       {acc.balances.map((b) => (
-                        <div key={b.currency} className="text-sm truncate">
-                          <span className="text-[var(--text-secondary)]">{b.currency}:</span>{" "}
-                          {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
-                        </div>
+                        <span key={b.currency} className="badge badge-confirmed" style={{ fontSize: "13px", padding: "4px 12px" }}>
+                          {b.currency}: {b.amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })}
+                        </span>
                       ))}
                     </div>
-
                     {acc.addresses.length > 0 && (
-                      <div className="mt-2 text-xs text-[var(--text-muted)]">
+                      <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--text-muted)" }}>
                         {acc.addresses.map((a) => (
-                          <div key={a.network} className="truncate">
-                            {a.network}: {a.address.slice(0, 10)}...{a.address.slice(-4)}
+                          <div key={a.network} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {a.network}: {a.address.slice(0, 8)}...{a.address.slice(-4)}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  <div className="flex items-center gap-2 text-xs shrink-0">
+                  <div className="badge" style={{ flexShrink: 0, fontSize: "11px" }}>
                     {acc.credentials ? (
                       <span className="badge badge-confirmed">{acc.credentials.exchange.toUpperCase()}</span>
                     ) : acc.isAutoSync ? (
@@ -141,6 +166,6 @@ export default function AccountsPage() {
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }
