@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { operations, operationEntries, accounts } from "@/db/schema";
+import { operations, operationEntries, accounts, tags, operationTags } from "@/db/schema";
 import { eq, and, desc, gte, lte, like, sql, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  const { description, category, date, entries, status } = body;
+  const { description, category, date, entries, status, groupId, debtId, customRate, customRateLabel, tags: tagNames } = body;
 
   if (!date || !entries || !Array.isArray(entries) || entries.length === 0) {
     return NextResponse.json({ error: "date and entries are required" }, { status: 400 });
@@ -37,6 +37,10 @@ export async function POST(request: Request) {
     userId,
     description: description || null,
     category: category || null,
+    groupId: groupId || null,
+    customRate: customRate || null,
+    customRateLabel: customRateLabel || null,
+    debtId: debtId || null,
     date,
     source: "manual",
     status: status || "draft",
@@ -93,6 +97,15 @@ export async function POST(request: Request) {
     }).run();
   }
 
+  if (tagNames && Array.isArray(tagNames) && tagNames.length > 0) {
+    for (const name of tagNames) {
+      const tag = db.select().from(tags).where(eq(tags.name, name)).get();
+      if (tag) {
+        db.insert(operationTags).values({ operationId: op.id, tagId: tag.id }).run();
+      }
+    }
+  }
+
   if (status === "confirmed") {
     recalculateAllBalances();
     markDirty();
@@ -105,17 +118,21 @@ export async function POST(request: Request) {
     action: "create",
     entityType: "operation",
     entityId: op.id,
-    details: `${category || "uncategorized"} operation with ${finalEntries.length} entries`,
+    details: `${category || "uncategorized"} operation with ${finalEntries.length} entries${tagNames?.length ? `, tags: ${tagNames.join(", ")}` : ""}`,
   });
 
   const created = db.select().from(operations).where(eq(operations.id, op.id)).get();
   const createdEntries = db.select().from(operationEntries)
     .where(eq(operationEntries.operationId, op.id)).all();
 
+  const createdTags = db.select({ name: tags.name }).from(operationTags)
+    .innerJoin(tags, eq(tags.id, operationTags.tagId))
+    .where(eq(operationTags.operationId, op.id)).all();
+
   const unverifiedFees = createdEntries.filter((e) => !e.isVerified);
 
   return NextResponse.json({
-    operation: { ...created, entries: createdEntries },
+    operation: { ...created, entries: createdEntries, tags: createdTags.map(t => t.name) },
     unverifiedFees: unverifiedFees.length > 0 ? unverifiedFees : undefined,
   }, { status: 201 });
 }
@@ -162,9 +179,24 @@ export async function GET(request: Request) {
     entriesByOpId[e.operationId].push(e);
   }
 
+  const allTags = opIds.length > 0
+    ? db.select({
+        operationId: operationTags.operationId,
+        name: tags.name,
+      }).from(operationTags)
+        .innerJoin(tags, eq(tags.id, operationTags.tagId))
+        .where(inArray(operationTags.operationId, opIds)).all()
+    : [];
+  const tagsByOpId: Record<number, string[]> = {};
+  for (const t of allTags) {
+    if (!tagsByOpId[t.operationId]) tagsByOpId[t.operationId] = [];
+    tagsByOpId[t.operationId].push(t.name);
+  }
+
   const result = list.map((o) => ({
     ...o,
     entries: entriesByOpId[o.id] || [],
+    tags: tagsByOpId[o.id] || [],
   }));
 
   return NextResponse.json({ operations: result, total, page, limit });

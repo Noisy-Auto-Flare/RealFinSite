@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { operations, operationEntries } from "@/db/schema";
+import { operations, operationEntries, tags, operationTags } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
@@ -24,7 +24,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const entries = db.select().from(operationEntries)
     .where(eq(operationEntries.operationId, opId)).all();
 
-  return NextResponse.json({ ...op, entries });
+  const opTags = db.select({ name: tags.name }).from(operationTags)
+    .innerJoin(tags, eq(tags.id, operationTags.tagId))
+    .where(eq(operationTags.operationId, opId)).all();
+
+  return NextResponse.json({ ...op, entries, tags: opTags.map(t => t.name) });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -42,7 +46,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  const allowedFields = ["description", "category", "date", "status"] as const;
+  const allowedFields = ["description", "category", "date", "status", "groupId", "debtId", "customRate", "customRateLabel"] as const;
   const updates: Record<string, unknown> = {};
 
   for (const field of allowedFields) {
@@ -68,11 +72,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     details: Object.keys(updates).join(", "),
   });
 
+  if (body.tags && Array.isArray(body.tags)) {
+    db.delete(operationTags).where(eq(operationTags.operationId, opId)).run();
+    for (const name of body.tags) {
+      const tag = db.select().from(tags).where(eq(tags.name, name)).get();
+      if (tag) {
+        db.insert(operationTags).values({ operationId: opId, tagId: tag.id }).run();
+      }
+    }
+  }
+
   const updated = db.select().from(operations).where(eq(operations.id, opId)).get();
   const entries = db.select().from(operationEntries)
     .where(eq(operationEntries.operationId, opId)).all();
+  const updatedTags = db.select({ name: tags.name }).from(operationTags)
+    .innerJoin(tags, eq(tags.id, operationTags.tagId))
+    .where(eq(operationTags.operationId, opId)).all();
 
-  return NextResponse.json({ ...updated, entries });
+  return NextResponse.json({ ...updated, entries, tags: updatedTags.map(t => t.name) });
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
