@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
 import { recalculateAllBalances } from "@/lib/balances";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
@@ -33,6 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   db.update(operationEntries).set(updates).where(eq(operationEntries.id, entryId)).run();
 
   recalculateAllBalances();
+  markDirty();
 
   const session = await auth();
   logAction({
