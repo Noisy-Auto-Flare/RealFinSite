@@ -15,7 +15,7 @@ const sqlite = new DatabaseClass(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function getSchemaVersion(s: Database): number {
   try {
@@ -353,6 +353,47 @@ export function runMigrations(sqlitep?: Database): void {
       last_metadata_fetch TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
   createIndex(s, "chain_contract_idx", "tokens", "chain, contract_address", true);
+
+  console.log("\n[operation_groups]");
+  createTable(s, "operation_groups", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)`);
+
+  console.log("\n[debts]");
+  createTable(s, "debts", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  person_name TEXT NOT NULL,
+  description TEXT,
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'RUB',
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  settled_at TEXT
+)`);
+
+  console.log("\n[tags]");
+  createTable(s, "tags", `(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  color TEXT,
+  description TEXT
+)`);
+
+  console.log("\n[operation_tags]");
+  createTable(s, "operation_tags", `(
+  operation_id INTEGER NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE
+)`);
+  createIndex(s, "operation_tag_pk", "operation_tags", "operation_id, tag_id", true);
+
+  console.log("\n[operations new columns]");
+  addColumn(s, "operations", "group_id", "INTEGER");
+  addColumn(s, "operations", "custom_rate", "REAL");
+  addColumn(s, "operations", "custom_rate_label", "TEXT");
+  addColumn(s, "operations", "debt_id", "INTEGER");
 
   console.log("\n[indexes]");
   const indexDefs = [

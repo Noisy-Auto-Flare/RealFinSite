@@ -1,4 +1,4 @@
-export type AccountType = "crypto_wallet" | "cex_exchange" | "broker" | "hybrid_bank" | "fiat_bank";
+export type AccountType = "crypto_wallet" | "cex_exchange" | "broker" | "hybrid_bank" | "fiat_bank" | "external";
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   crypto_wallet: "Криптокошелёк",
@@ -6,6 +6,7 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   broker: "Брокерский счёт",
   hybrid_bank: "Гибридный (фиат + крипта)",
   fiat_bank: "Банковский счёт",
+  external: "Внешний счёт",
 };
 
 export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
@@ -14,5 +15,6 @@ export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
   broker: "📈",
   hybrid_bank: "🏦",
   fiat_bank: "💳",
+  external: "🫴",
 };
 

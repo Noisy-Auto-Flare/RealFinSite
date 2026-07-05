@@ -7,7 +7,7 @@ import type { AccountType } from "@/lib/utils";
 import Select from "@/components/Select";
 
 const ACCOUNT_TYPES: AccountType[] = [
-  "crypto_wallet", "cex_exchange", "broker", "hybrid_bank", "fiat_bank",
+  "crypto_wallet", "cex_exchange", "broker", "hybrid_bank", "fiat_bank", "external",
 ];
 
 const EXCHANGES = ["bybit", "okx"];

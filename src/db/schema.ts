@@ -9,6 +9,40 @@ export const users = sqliteTable("users", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
 });
 
+export const debts = sqliteTable("debts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  personName: text("person_name").notNull(),
+  description: text("description"),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("RUB"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+  settledAt: text("settled_at"),
+});
+
+export const operationGroups = sqliteTable("operation_groups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP"),
+});
+
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  color: text("color"),
+  description: text("description"),
+});
+
+export const operationTags = sqliteTable("operation_tags", {
+  operationId: integer("operation_id").notNull()
+    .references(() => operations.id, { onDelete: "cascade" }),
+  tagId: integer("tag_id").notNull()
+    .references(() => tags.id, { onDelete: "cascade" }),
+}, (table) => ({
+  pk: uniqueIndex("operation_tag_pk").on(table.operationId, table.tagId),
+}));
+
 export const accounts = sqliteTable("accounts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -42,6 +76,10 @@ export const operations = sqliteTable("operations", {
   userId: integer("user_id").notNull().references(() => users.id),
   description: text("description"),
   category: text("category"),
+  groupId: integer("group_id"),
+  customRate: real("custom_rate"),
+  customRateLabel: text("custom_rate_label"),
+  debtId: integer("debt_id").references(() => debts.id),
   date: text("date").notNull(),
   source: text("source").notNull().default("manual"),
   txHash: text("tx_hash"),

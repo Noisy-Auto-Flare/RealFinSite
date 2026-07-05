@@ -30,6 +30,7 @@ const TYPE_ICONS: Record<string, string> = {
   broker: "fa-solid fa-chart-line",
   hybrid_bank: "fa-solid fa-landmark",
   fiat_bank: "fa-solid fa-building-columns",
+  external: "fa-solid fa-hand-holding-dollar",
 };
 
 function getTypeIcon(type: string): string {
@@ -42,6 +43,7 @@ function getTypeColor(type: string): string {
     case "cex_exchange": return "blue";
     case "broker": return "green";
     case "hybrid_bank": return "orange";
+    case "external": return "amber";
     case "fiat_bank": return "blue";
     default: return "blue";
   }
