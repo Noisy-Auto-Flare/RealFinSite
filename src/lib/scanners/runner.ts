@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { accountAddresses, accounts, operations, operationEntries } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
-import { recalculateAllBalances } from "@/db/migrate";
+import { recalculateAllBalances } from "@/lib/balances";
 import { markDirty } from "@/lib/beancount/dirty-flag";
 import { getTokenMetadata } from "@/lib/token-metadata";
 

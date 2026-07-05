@@ -4,7 +4,7 @@ import { accountAddresses, accounts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { syncAddressBalance } from "@/lib/scanners/runner";
-import { recalculateAllBalances } from "@/db/migrate";
+import { recalculateAllBalances } from "@/lib/balances";
 import { markDirty } from "@/lib/beancount/dirty-flag";
 
 export async function POST() {

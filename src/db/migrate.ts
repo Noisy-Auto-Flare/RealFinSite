@@ -2,6 +2,7 @@ import DatabaseClass from "better-sqlite3";
 import type { Database } from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { recalculateAllBalances } from "@/lib/balances";
 
 const dbPath = process.env.DATABASE_URL || "./data/fintracker.db";
 const dir = path.dirname(dbPath);
@@ -173,39 +174,6 @@ function updateBalances(sqlite: Database): void {
   }
 }
 
-export function recalculateAllBalances(sqlitep?: Database): void {
-  const s = sqlitep ?? sqlite;
-  if (!tableExists(s, "balances")) {
-    console.log("  ✔ balances table does not exist, skipping recalculation");
-    return;
-  }
-  s.exec("BEGIN");
-  try {
-    s.exec("DELETE FROM balances;");
-    s.exec(`
-      INSERT INTO balances (account_id, currency, amount)
-      SELECT
-        oe.account_id,
-        oe.currency,
-        COALESCE(SUM(oe.amount), 0) as amount
-      FROM operation_entries oe
-      JOIN operations o ON oe.operation_id = o.id
-      WHERE o.status = 'confirmed'
-      GROUP BY oe.account_id, oe.currency;
-    `);
-    s.exec(`
-      INSERT OR IGNORE INTO balances (account_id, currency, amount)
-      SELECT a.id, a.currency, 0 FROM accounts a;
-    `);
-    s.exec("COMMIT");
-    console.log("  ✓ balances recalculated from confirmed entries");
-  } catch (e) {
-    s.exec("ROLLBACK");
-    console.error("  ✗ balance recalculation failed:", e);
-    throw e;
-  }
-}
-
 export function runMigrations(sqlitep?: Database): void {
   const s = sqlitep ?? sqlite;
 
@@ -327,7 +295,7 @@ export function runMigrations(sqlitep?: Database): void {
   createTable(s, "operation_entries", `(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operation_id INTEGER NOT NULL REFERENCES operations(id) ON DELETE CASCADE,
-      account_id INTEGER NOT NULL REFERENCES accounts(id),
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       currency TEXT NOT NULL,
       amount REAL NOT NULL,
       type TEXT NOT NULL DEFAULT 'principal',

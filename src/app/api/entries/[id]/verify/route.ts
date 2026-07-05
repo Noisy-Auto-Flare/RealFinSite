@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
-import { recalculateAllBalances } from "@/db/migrate";
+import { recalculateAllBalances } from "@/lib/balances";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();

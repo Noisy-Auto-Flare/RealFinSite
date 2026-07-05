@@ -1,24 +1,27 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import Database from "better-sqlite3";
 import { createTestDb, seedTestData } from "../setup";
-import { recalculateAllBalances, recalculateAccountBalances } from "@/lib/balances/recalculate";
-import { db } from "@/db";
+import { recalculateAllBalances, recalculateAccountBalances } from "@/lib/balances";
 import { balances } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import * as schema from "@/db/schema";
 
 let sqlite: Database.Database;
+let drizzleDb: ReturnType<typeof drizzle<typeof schema>>;
 let seed: { userId: number; accountId: number };
 
 describe("recalculate", () => {
   beforeAll(() => {
     const ctx = createTestDb();
     sqlite = ctx.sqlite;
+    drizzleDb = ctx.db;
     seed = seedTestData(sqlite);
   });
 
   it("should create zero balance row after recalculation", () => {
     recalculateAllBalances(sqlite);
-    const rows = db.select().from(balances).where(eq(balances.accountId, seed.accountId)).all();
+    const rows = drizzleDb.select().from(balances).where(eq(balances.accountId, seed.accountId)).all();
     expect(rows.length).toBeGreaterThan(0);
   });
 
@@ -32,7 +35,7 @@ describe("recalculate", () => {
     ).run(opId, seed.accountId, "RUB", 500);
 
     recalculateAllBalances(sqlite);
-    const row = db.select().from(balances).where(
+    const row = drizzleDb.select().from(balances).where(
       eq(balances.accountId, seed.accountId)
     ).get();
     expect(row!.amount).toBe(500);

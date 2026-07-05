@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/server-utils";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
-import { recalculateAllBalances } from "@/db/migrate";
+import { recalculateAllBalances } from "@/lib/balances";
 import { markDirty } from "@/lib/beancount/dirty-flag";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
