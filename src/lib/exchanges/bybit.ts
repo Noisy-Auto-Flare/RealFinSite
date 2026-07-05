@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { apiCredentials, operations, operationEntries, balances } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { decrypt } from "@/lib/crypto";
+import { markDirty } from "@/lib/beancount/dirty-flag";
 
 const BASE_URL = "https://api.bybit.com";
 
@@ -238,5 +239,6 @@ export async function syncAccount(accountId: number, userId: number): Promise<{ 
     .where(eq(apiCredentials.accountId, accountId))
     .run();
 
+  markDirty();
   return { balances: balanceCount, operations: opCount };
 }
