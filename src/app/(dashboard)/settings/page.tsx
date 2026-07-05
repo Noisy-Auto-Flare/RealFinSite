@@ -24,12 +24,24 @@ interface KeyEntry {
   hasKey: boolean;
 }
 
+interface UserRow {
+  id: number;
+  username: string;
+  role: string;
+  status: string;
+  created_at: string;
+}
+
 export default function SettingsPage() {
   const toast = useToast();
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [savedNetworks, setSavedNetworks] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/settings/blockchain-keys")
@@ -44,7 +56,26 @@ export default function SettingsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch("/api/admin/users")
+      .then((r) => r.json())
+      .then((data: UserRow[]) => { setUsers(data); setUsersLoading(false); })
+      .catch(() => setUsersLoading(false));
   }, []);
+
+  async function deleteUser(userId: number) {
+    if (!confirm("Удалить пользователя? Все его счета и операции будут безвозвратно удалены.")) return;
+    setDeletingId(userId);
+    const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Пользователь удалён");
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } else {
+      const err = await res.json().catch(() => ({ error: "Ошибка" }));
+      toast.error(err.error || "Ошибка удаления");
+    }
+    setDeletingId(null);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -137,6 +168,36 @@ export default function SettingsPage() {
             >
               {saving ? "Сохранение..." : "Сохранить ключи"}
             </button>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h2 className="font-medium mb-3">Пользователи</h2>
+        {usersLoading ? (
+          <p className="text-[var(--text-muted)]">Загрузка...</p>
+        ) : (
+          <div className="space-y-2">
+            {users.map((u) => (
+              <div key={u.id} className="flex items-center justify-between py-1.5 border-b border-[var(--border)] last:border-0">
+                <div>
+                  <span className="font-mono text-sm">{u.username}</span>
+                  <span className="ml-2 text-xs text-[var(--text-muted)]">{u.role}</span>
+                  <span className={`ml-2 text-xs ${u.status === "approved" ? "text-green-600" : "text-red-500"}`}>
+                    {u.status}
+                  </span>
+                </div>
+                {u.role !== "master" && (
+                  <button
+                    onClick={() => deleteUser(u.id)}
+                    disabled={deletingId === u.id}
+                    className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
+                  >
+                    {deletingId === u.id ? "Удаление..." : "Удалить"}
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
