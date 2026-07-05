@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { accounts, balances, accountAddresses } from "@/db/schema";
+import { accounts, balances, accountAddresses, operationEntries, balanceSnapshots, apiCredentials } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
+import { recalculateAllBalances } from "@/lib/balances";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
@@ -87,7 +88,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  db.delete(operationEntries).where(eq(operationEntries.accountId, accountId)).run();
+  db.delete(balances).where(eq(balances.accountId, accountId)).run();
+  db.delete(balanceSnapshots).where(eq(balanceSnapshots.accountId, accountId)).run();
+  db.delete(accountAddresses).where(eq(accountAddresses.accountId, accountId)).run();
+  db.delete(apiCredentials).where(eq(apiCredentials.accountId, accountId)).run();
   db.delete(accounts).where(eq(accounts.id, accountId)).run();
+
+  recalculateAllBalances();
 
   const session = await auth();
   logAction({

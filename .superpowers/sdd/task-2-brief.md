@@ -1,28 +1,37 @@
-# Task 2: Add `tokens` table to schema and migration
+
+### Task 2: Create `POST /api/scanner/run` endpoint
 
 **Files:**
-- Modify: `src/db/schema.ts`
-- Modify: `src/db/migrate.ts`
+- Create: `src/app/api/scanner/run/route.ts`
 
-**Acceptance Criteria:**
-1. Add `tokens` table to `src/db/schema.ts` with:
-   - `id` integer primary key autoincrement
-   - `chain` text not null
-   - `contractAddress` text not null
-   - `symbol` text not null
-   - `name` text (nullable)
-   - `decimals` integer not null default 18
-   - `logoUrl` text (nullable)
-   - `metadataSource` text default 'explorer'
-   - `lastMetadataFetch` text default CURRENT_TIMESTAMP
-   - Unique index `chain_contract_idx` on `(chain, contractAddress)`
-2. Bump `SCHEMA_VERSION` from 1 to 2 in `migrate.ts`
-3. Add `tokens` table creation to `runMigrations` in `migrate.ts` (before `[indexes]` section) using `createTable()` + `createIndex()` helpers
-4. `npx tsc --noEmit` passes with no errors
+**Interfaces:**
+- Consumes: `runScannerCycle(): Promise<{ eventsFound: number; addressesScanned: number }>` from `@/lib/scanners/runner`
+- Produces: `POST /api/scanner/run` returns `{ success: true, eventsFound: number, addressesScanned: number }`
 
-**Context:**
-- The `blockchainApiKeys` table is the last table defined in schema.ts — add `tokens` after it
-- migrate.ts uses `SCHEMA_VERSION = 1` on line 17 — change it to `SCHEMA_VERSION = 2`
-- `createTable()` and `createIndex()` helper functions already exist in migrate.ts
-- The `[indexes]` section starts at line 375 — add tokens section before it
-- Use `createIndex(s, "chain_contract_idx", "tokens", "chain, contract_address", true)` — note the `true` for unique
+- [ ] **Create the API route file**
+
+```typescript
+import { NextResponse } from "next/server";
+import { getCurrentUserId } from "@/lib/auth";
+import { runScannerCycle } from "@/lib/scanners/runner";
+
+export async function POST() {
+  const userId = await getCurrentUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const result = await runScannerCycle();
+    return NextResponse.json({ success: true, ...result });
+  } catch (e) {
+    console.error("[api/scanner/run] Scanner cycle failed:", e);
+    return NextResponse.json({ error: "Scanner cycle failed" }, { status: 500 });
+  }
+}
+```
+
+- [ ] **Commit**
+
+```bash
+git add src/app/api/scanner/run/route.ts
+git commit -m "feat: add POST /api/scanner/run endpoint"
+```

@@ -14,15 +14,16 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const keys = db.select().from(blockchainApiKeys).all();
-  const masked = keys.map((k) => ({
+  const result = keys.map((k) => ({
     id: k.id,
     network: k.network,
     apiKey: maskKey(k.apiKey),
+    hasKey: true,
     createdAt: k.createdAt,
     updatedAt: k.updatedAt,
   }));
 
-  return NextResponse.json(masked);
+  return NextResponse.json(result);
 }
 
 export async function PUT(request: Request) {

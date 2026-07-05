@@ -4,18 +4,20 @@ import { eq, and } from "drizzle-orm";
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 
-const CRYPTO_IDS: Record<string, string> = {
-  SOL: "solana",
-  BNB: "binancecoin",
-  TON: "toncoin",
-  BTC: "bitcoin",
-  ETH: "ethereum",
-  USDT: "tether",
-  USDC: "usd-coin",
+const CRYPTO_COIN_IDS: Record<string, string[]> = {
+  SOL: ["solana"],
+  BNB: ["binancecoin"],
+  TON: ["the-open-network", "toncoin"],
+  TRX: ["tron"],
+  AVAX: ["avalanche-2"],
+  BTC: ["bitcoin"],
+  ETH: ["ethereum"],
+  USDT: ["tether"],
+  USDC: ["usd-coin"],
 };
 
 const FIAT_CURRENCIES = ["RUB", "USD", "CNY", "EUR"];
-const ALL_SUPPORTED = [...Object.keys(CRYPTO_IDS), ...FIAT_CURRENCIES];
+const ALL_SUPPORTED = [...Object.keys(CRYPTO_COIN_IDS), ...FIAT_CURRENCIES];
 
 interface CoinGeckoPriceResponse {
   [coinId: string]: {
@@ -28,11 +30,11 @@ export async function fetchAndStoreRates(): Promise<void> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (apiKey) headers["x-cg-demo-api-key"] = apiKey;
 
-  const coinIds = Object.values(CRYPTO_IDS).join(",");
+  const allIds = [...new Set(Object.values(CRYPTO_COIN_IDS).flat())].join(",");
   const vsCurrencies = ["usd", "rub", "cny"].join(",");
 
   // Fetch crypto prices in USD, RUB, CNY
-  const cryptoUrl = `${COINGECKO_BASE}/simple/price?ids=${coinIds}&vs_currencies=${vsCurrencies}`;
+  const cryptoUrl = `${COINGECKO_BASE}/simple/price?ids=${allIds}&vs_currencies=${vsCurrencies}`;
   const cryptoRes = await fetch(cryptoUrl, { headers, next: { revalidate: 300 } });
 
   if (!cryptoRes.ok) {
@@ -48,9 +50,11 @@ export async function fetchAndStoreRates(): Promise<void> {
     return;
   }
 
-  // Store crypto → fiat rates
-  for (const [symbol, coinId] of Object.entries(CRYPTO_IDS)) {
-    const prices = cryptoData[coinId];
+  // Store crypto → fiat rates (use first coin ID that returns data)
+  for (const [symbol, coinIds] of Object.entries(CRYPTO_COIN_IDS)) {
+    const prices = coinIds.reduce<{ usd?: number; rub?: number; cny?: number } | null>(
+      (found, id) => found || cryptoData[id] || null, null
+    );
     if (!prices) continue;
 
     if (prices.usd) {

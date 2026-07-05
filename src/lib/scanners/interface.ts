@@ -55,6 +55,10 @@ export async function getScanner(network: string): Promise<IScanner | null> {
       const { TonScanner } = await import("./ton");
       return new TonScanner();
     }
+    case "tron": {
+      const { TronScanner } = await import("./tron");
+      return new TronScanner();
+    }
     default:
       return null;
   }

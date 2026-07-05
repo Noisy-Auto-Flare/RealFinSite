@@ -1,39 +1,21 @@
-# Task 3 Report: Rewrite `evm.ts` into modular `evm/scanner.ts`
+# Task 3 Report: Add "Check New Transactions" Button
 
 ## What I implemented
+- Added `scanning` state variable (`const [scanning, setScanning] = useState(false)`)
+- Added `handleScan()` async function that calls `POST /api/scanner/run`, displays toast results based on `data.eventsFound`, and reloads transactions
+- Added a "Проверить новые транзакции" button before the transaction list card, disabled while scanning showing "Проверка..."
 
-1. **Created `src/lib/scanners/evm/scanner.ts`** — new `EvmScanner` class implementing `IScanner`:
-   - Constructor takes `network: string`, throws if network not in `EVM_NETWORKS`
-   - `getApiKey()`: `process.env[this.config.envKey] || getNetworkApiKey(this.network) || ""`
-   - `fetchExplorer(action, address, fromBlock)`: inline pagination via `while` loop, fetches next page if result >= 10000 items, all requests use `AbortSignal.timeout(15000)`
-   - `fetchNewTransactions`: calls `fetchExplorer` for `txlist` and `tokentx`, merges, sorts by timestamp ascending
-   - Normal tx events include `tokenSymbol: this.config.nativeSymbol`
-   - Token tx events include `tokenSymbol` from explorer response
-   - `fetchNativeBalance`: calls `balance` action + `eth_blockNumber` proxy action
-   - `fetchAllBalances`: returns native balance only (via `fetchNativeBalance`)
-
-2. **Updated `src/lib/scanners/interface.ts`** — changed import from `"./evm"` to `"./evm/scanner"`
-
-3. **Deleted `src/lib/scanners/evm.ts`** — old monolithic scanner file
-
-## Test results
-
-- `npx tsc --noEmit` — passes with no errors
+## What I tested and results
+- `npm run typecheck` — passed with no errors
 
 ## Files changed
-
-- `src/lib/scanners/evm/scanner.ts` — created (new modular scanner)
-- `src/lib/scanners/interface.ts` — updated import path
-- `src/lib/scanners/evm.ts` — deleted
+- `src/app/(dashboard)/transactions/page.tsx` — 22 insertions
 
 ## Self-review findings
-
-- All acceptance criteria met
-- Pagination inlined in `fetchExplorer` per brief instruction
-- Uses `EVM_NETWORKS` config (12 networks) and `getNetworkApiKey` helper
-- Native tx events now include `tokenSymbol: this.config.nativeSymbol` (consistent with plan code)
-- `fetchAllBalances` uses `this.config.nativeSymbol` instead of hardcoded map
+- Button placement matches brief (before the card div)
+- State and handler follow existing code patterns (same style as `saving`/`saveEdit`)
+- Uses existing `toast` and `loadTxs` from the component scope
+- Single concern: the button sits before `<div className="card">` but inside the filters block visually — may want to adjust layout if button needs to be in a specific position relative to filters
 
 ## Issues or concerns
-
-- `getScanner` in `interface.ts` still only routes `ethereum`, `bsc`, `avalanche` to `EvmScanner` via its switch statement. Other networks from `EVM_NETWORKS` (polygon, base, arbitrum, etc.) will return `null` — this is pre-existing behavior and not part of this task scope.
+None

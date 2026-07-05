@@ -62,8 +62,10 @@ export async function runScannerCycle(): Promise<{ eventsFound: number; addresse
     markDirty();
 
     const maxBlock = Math.max(...events.map((e) => e.blockNumber), row.addr.lastSyncBlock ?? 0);
+    const newLastSyncBlock = maxBlock + 1;
+    console.log(`[scanner]     maxBlock: ${maxBlock} → newLastSyncBlock: ${newLastSyncBlock} (was: ${row.addr.lastSyncBlock})`);
     db.update(accountAddresses)
-      .set({ lastSyncBlock: maxBlock })
+      .set({ lastSyncBlock: newLastSyncBlock })
       .where(eq(accountAddresses.id, row.addr.id))
       .run();
   }

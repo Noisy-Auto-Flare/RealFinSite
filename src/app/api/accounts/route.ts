@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { accounts, balances, accountAddresses, apiCredentials } from "@/db/schema";
+import { accounts, balances, accountAddresses, apiCredentials, operations, operationEntries } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
@@ -84,10 +84,22 @@ export async function POST(request: Request) {
 
   if (initialBalances && Array.isArray(initialBalances)) {
     for (const bal of initialBalances) {
-      db.insert(balances).values({
+      const amount = parseFloat(bal.amount) || 0;
+      if (amount === 0) continue;
+      const op = db.insert(operations).values({
+        userId,
+        description: `Initial balance (${bal.currency})`,
+        date: new Date().toISOString().split("T")[0],
+        source: "manual",
+        status: "confirmed",
+      }).returning().get();
+      db.insert(operationEntries).values({
+        operationId: op.id,
         accountId: account.id,
         currency: bal.currency,
-        amount: bal.amount || 0,
+        amount,
+        type: "principal",
+        isVerified: 1,
       }).run();
     }
   } else if (!multiCurrency) {

@@ -1,25 +1,44 @@
-# Task 3: Rewrite `evm.ts` into modular `evm/scanner.ts`
+
+### Task 3: Add button to transactions page
 
 **Files:**
-- Create: `src/lib/scanners/evm/scanner.ts`
-- Delete: `src/lib/scanners/evm.ts`
+- Modify: `src/app/(dashboard)/transactions/page.tsx`
 
-**Acceptance Criteria:**
-1. Create `evm/` directory and `evm/scanner.ts` implementing `IScanner`
-2. EvmScanner uses `EVM_NETWORKS` from `./config` and `getNetworkApiKey` from `../api-keys`
-3. Support both `txlist` and `tokentx` explorer endpoints
-4. Pagination: fetch next page if result >= 10000 items
-5. `fetchNewTransactions` returns sorted events (by timestamp)
-6. `fetchNativeBalance` uses `balance` action + `eth_blockNumber` proxy action
-7. `fetchAllBalances` returns native balance only
-8. Delete old `src/lib/scanners/evm.ts`
-9. `npx tsc --noEmit` passes with no errors
+- [ ] **Add scanning state and handler function after the saving state** (after line 42: `const [saving, setSaving] = useState(false);`)
 
-**Implementation detail:**
-- The old `evm.ts` has a `fetchPage` method; the new scanner should inline pagination in `fetchExplorer` (see plan code)
-- Constructor takes `network: string`, throws if network not in EVM_NETWORKS
-- `getApiKey()` falls back: `process.env[cfg.envKey] || getNetworkApiKey(network) || ""`
-- All explorer calls use `AbortSignal.timeout(15000)`
-- Full code is in the plan — use it verbatim
+```typescript
+const [scanning, setScanning] = useState(false);
 
-No tests — verify with `npx tsc --noEmit`.
+async function handleScan() {
+  setScanning(true);
+  try {
+    const res = await fetch("/api/scanner/run", { method: "POST" });
+    const data = await res.json();
+    if (data.eventsFound > 0) {
+      toast.success(`Найдено ${data.eventsFound} новых транзакций`);
+    } else {
+      toast.info("Новых транзакций не найдено");
+    }
+    loadTxs();
+  } catch {
+    toast.error("Ошибка сканирования");
+  } finally {
+    setScanning(false);
+  }
+}
+```
+
+- [ ] **Add the button before the card div** (before line 153: `<div className="card">`)
+
+```tsx
+      <button onClick={handleScan} disabled={scanning} className="btn btn-ghost text-sm w-full md:w-auto">
+        {scanning ? "Проверка..." : "Проверить новые транзакции"}
+      </button>
+```
+
+- [ ] **Commit**
+
+```bash
+git add src/app/(dashboard)/transactions/page.tsx
+git commit -m "feat: add check new transactions button to history page"
+```

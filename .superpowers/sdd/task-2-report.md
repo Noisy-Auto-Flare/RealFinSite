@@ -1,40 +1,28 @@
-# Task 2 Report: Add `tokens` table to schema and migration
+# Task 2 Report: Create `POST /api/scanner/run` endpoint
 
 ## What I implemented
 
-1. **`src/db/schema.ts`**: Added `tokens` table after `blockchainApiKeys` with:
-   - `id` (integer primary key autoincrement)
-   - `chain` (text, not null)
-   - `contractAddress` → `contract_address` (text, not null)
-   - `symbol` (text, not null)
-   - `name` (text, nullable)
-   - `decimals` (integer, not null, default 18)
-   - `logoUrl` → `logo_url` (text, nullable)
-   - `metadataSource` → `metadata_source` (text, default `'explorer'`)
-   - `lastMetadataFetch` → `last_metadata_fetch` (text, default `CURRENT_TIMESTAMP`)
-   - Unique index `chain_contract_idx` on `(chain, contract_address)` via Drizzle `uniqueIndex`
+Created `src/app/api/scanner/run/route.ts` — a Next.js API route that:
+- Checks authentication via `getCurrentUserId()` from `@/lib/auth`
+- Delegates to `runScannerCycle()` from `@/lib/scanners/runner`
+- Returns `{ success: true, eventsFound, addressesScanned }` on success
+- Returns `401` with `{ error: "Unauthorized" }` if no authenticated user
+- Returns `500` with `{ error: "Scanner cycle failed" }` on exception
 
-2. **`src/db/migrate.ts`**:
-   - Bumped `SCHEMA_VERSION` from 1 to 2 (line 17)
-   - Added `[tokens]` section before `[indexes]` with `createTable()` for the tokens table and `createIndex()` for `chain_contract_idx` (unique)
+## What I tested and test results
 
-## Test results
-
-- `npx tsc --noEmit` — passes with no errors
+- Ran `npm run typecheck` (tsc --noEmit) — **passed with no errors**
 
 ## Files changed
 
-- `src/db/schema.ts` — added `tokens` table definition (export + uniqueIndex)
-- `src/db/migrate.ts` — bumped SCHEMA_VERSION to 2, added tokens table creation + index
+- Created: `src/app/api/scanner/run/route.ts` (16 lines)
 
 ## Self-review findings
 
-- All acceptance criteria met
-- Column naming convention matches existing patterns (`contract_address`, `logo_url`, `metadata_source`, `last_metadata_fetch`)
-- `uniqueIndex` pattern matches existing `exchangeRates` and `balances` tables
-- `createTable`/`createIndex` helpers used correctly in migrate.ts
-- The `tokens` section is placed before `[indexes]` per brief instructions
+- The import `@/lib/auth` correctly resolves because `src/lib/auth/index.ts` re-exports `getCurrentUserId` from `server-utils.ts`
+- The return type of `runScannerCycle()` matches what the route spreads into the JSON response
+- No edge cases missed — auth guard, try/catch, and success path are all covered
 
 ## Issues or concerns
 
-- None
+None.

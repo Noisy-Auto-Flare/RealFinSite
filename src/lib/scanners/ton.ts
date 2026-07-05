@@ -1,5 +1,6 @@
 import { IScanner, NativeBalanceResult, RawBlockchainEvent, BalanceEntry, AllBalancesResult } from "./interface";
 import { getNetworkApiKey } from "./api-keys";
+import { mergeBalances } from "./currency-aliases";
 
 interface TonTx {
   transaction_id: { lt: string; hash: string };
@@ -35,6 +36,16 @@ interface TonResponse<T> {
 const JETTON_DECIMALS: Record<string, number> = {};
 const JETTON_SYMBOLS: Record<string, string> = {};
 const JETTON_FETCHING = new Set<string>();
+
+// Hardcoded metadata for well-known TON jettons where off-chain metadata URL may fail to fetch
+const KNOWN_JETTONS: Record<string, { decimals: number; symbol: string }> = {
+  // Tether USD₮ (USDT) on TON — user's contract
+  "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs": { decimals: 6, symbol: "USD₮" },
+};
+
+const KNOWN_SYMBOL_DECIMALS: Record<string, number> = {
+  "USD₮": 6,
+};
 
 export class TonScanner implements IScanner {
   network = "ton";
@@ -178,7 +189,7 @@ export class TonScanner implements IScanner {
         console.log(`[ton.fetchAllBalances] v3 jetton/wallets returned ${jettonRes.status} for ${address}`);
       }
 
-      return { balances, blockNumber };
+      return { balances: mergeBalances(balances), blockNumber };
     } catch (e) {
       console.log(`[ton.fetchAllBalances] error: ${e}`);
       return null;
@@ -225,6 +236,13 @@ export class TonScanner implements IScanner {
 }
 
 async function getJettonMeta(master: string): Promise<{ decimals: number; symbol: string }> {
+  const known = KNOWN_JETTONS[master];
+  if (known) {
+    JETTON_DECIMALS[master] = known.decimals;
+    JETTON_SYMBOLS[master] = known.symbol;
+    return known;
+  }
+
   if (JETTON_DECIMALS[master] !== undefined) {
     return { decimals: JETTON_DECIMALS[master], symbol: JETTON_SYMBOLS[master] || "" };
   }
@@ -248,11 +266,28 @@ async function getJettonMeta(master: string): Promise<{ decimals: number; symbol
       if (data.jetton_masters?.length > 0) {
         const jc = data.jetton_masters[0].jetton_content;
         if (jc) {
-          const d = Number(jc.decimals ?? 9);
-          const s = String(jc.symbol ?? "");
-          JETTON_DECIMALS[master] = d;
-          JETTON_SYMBOLS[master] = s;
-          return { decimals: d, symbol: s };
+          const uri = jc.uri ? String(jc.uri) : null;
+          if (uri) {
+            try {
+              const uriRes = await fetch(uri, { signal: AbortSignal.timeout(10000) });
+              if (uriRes.ok) {
+                const uriData: { decimals?: number; symbol?: string } = await uriRes.json();
+                const d = Number(uriData.decimals ?? 9);
+                const s = uriData.symbol || "";
+                const effectiveDec = KNOWN_SYMBOL_DECIMALS[s] ?? d;
+                JETTON_DECIMALS[master] = effectiveDec;
+                JETTON_SYMBOLS[master] = s;
+                return { decimals: effectiveDec, symbol: s };
+              }
+            } catch {}
+          } else {
+            const d = Number(jc.decimals ?? 9);
+            const s = String(jc.symbol ?? "");
+            const effectiveDec = KNOWN_SYMBOL_DECIMALS[s] ?? d;
+            JETTON_DECIMALS[master] = effectiveDec;
+            JETTON_SYMBOLS[master] = s;
+            return { decimals: effectiveDec, symbol: s };
+          }
         }
       }
     }
@@ -263,13 +298,31 @@ async function getJettonMeta(master: string): Promise<{ decimals: number; symbol
     const v2Url = `${baseUrlV2}/getTokenData?address=${master}${apiKey ? `&api_key=${apiKey}` : ""}`;
     const res = await fetch(v2Url, { signal: AbortSignal.timeout(10000) });
     if (res.ok) {
-      const data: { ok: boolean; result: { jetton_content?: { data?: { decimals?: string; symbol?: string } } } } = await res.json();
+      const data: { ok: boolean; result: { jetton_content?: { data?: { decimals?: string; symbol?: string; uri?: string } } } } = await res.json();
       if (data.ok && data.result?.jetton_content?.data) {
         const d = Number(data.result.jetton_content.data.decimals ?? 9);
         const s = data.result.jetton_content.data.symbol || "";
-        JETTON_DECIMALS[master] = d;
-        JETTON_SYMBOLS[master] = s;
-        return { decimals: d, symbol: s };
+        if (s) {
+          const effectiveDec = KNOWN_SYMBOL_DECIMALS[s] ?? d;
+          JETTON_DECIMALS[master] = effectiveDec;
+          JETTON_SYMBOLS[master] = s;
+          return { decimals: effectiveDec, symbol: s };
+        }
+        const uri = data.result.jetton_content.data.uri;
+        if (uri) {
+          try {
+            const uriRes = await fetch(uri, { signal: AbortSignal.timeout(10000) });
+            if (uriRes.ok) {
+              const uriData: { decimals?: number; symbol?: string } = await uriRes.json();
+              const d2 = Number(uriData.decimals ?? 9);
+              const s2 = uriData.symbol || "";
+              const effectiveDec2 = KNOWN_SYMBOL_DECIMALS[s2] ?? d2;
+              JETTON_DECIMALS[master] = effectiveDec2;
+              JETTON_SYMBOLS[master] = s2;
+              return { decimals: effectiveDec2, symbol: s2 };
+            }
+          } catch {}
+        }
       }
     }
   } catch {}

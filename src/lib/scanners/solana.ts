@@ -1,5 +1,6 @@
 import { IScanner, NativeBalanceResult, RawBlockchainEvent, BalanceEntry, AllBalancesResult } from "./interface";
 import { getNetworkApiKey } from "./api-keys";
+import { mergeBalances } from "./currency-aliases";
 
 interface HeliusTx {
   type: string;
@@ -47,7 +48,7 @@ export class SolanaScanner implements IScanner {
 
     while (hasMore && iterations < 5) {
       iterations++;
-      let url = `https://api.helius.xyz/v0/addresses/${address}/transactions?apiKey=${apiKey}&limit=100`;
+      let url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${apiKey}&limit=100`;
       if (beforeTx) url += `&beforeTx=${beforeTx}`;
 
       let res: Response;
@@ -223,7 +224,7 @@ export class SolanaScanner implements IScanner {
         blockNumber = slotData.result ?? 0;
       }
 
-      return { balances, blockNumber };
+      return { balances: mergeBalances(balances), blockNumber };
     } catch (e) {
       console.log(`[solana.fetchAllBalances] error: ${e}`);
       return null;
@@ -236,7 +237,7 @@ async function getSplMeta(mint: string): Promise<{ decimals: number; symbol: str
     return { decimals: SPL_TOKEN_DECIMALS[mint], symbol: TOKEN_SYMBOLS[mint] || "" };
   }
   try {
-    const url = `https://api.helius.xyz/v0/token-metadata?apiKey=${process.env.HELIUS_API_KEY || getNetworkApiKey("solana")}`;
+    const url = `https://api.helius.xyz/v0/token-metadata?api-key=${process.env.HELIUS_API_KEY || getNetworkApiKey("solana")}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

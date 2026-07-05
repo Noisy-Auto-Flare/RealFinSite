@@ -4,6 +4,7 @@ import { balances, accounts, operations, operationEntries } from "@/db/schema";
 import { eq, and, gte, lte, inArray, sql, lt } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { convertAmount } from "@/lib/rates/coingecko";
+import { normalizeCurrency } from "@/lib/scanners/currency-aliases";
 
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -34,8 +35,20 @@ export async function GET(request: Request) {
     .where(inArray(balances.accountId, accountIds))
     .all();
 
+  const mergedBalances = new Map<string, { accountId: number; amount: number; currency: string }>();
+  for (const b of allBalances) {
+    const currency = normalizeCurrency(b.currency);
+    const key = `${b.accountId}:${currency}`;
+    const existing = mergedBalances.get(key);
+    if (existing) {
+      existing.amount += b.amount;
+    } else {
+      mergedBalances.set(key, { accountId: b.accountId, amount: b.amount, currency });
+    }
+  }
+
   let totalCapitalConverted = 0;
-  const convertedBalances = allBalances.map((b) => {
+  const convertedBalances = Array.from(mergedBalances.values()).map((b) => {
     const account = userAccounts.find((a) => a.id === b.accountId);
     const conversion = convertAmount(Math.abs(b.amount), b.currency, baseCurrency);
     const amountInBase = conversion?.converted ?? null;
@@ -52,6 +65,18 @@ export async function GET(request: Request) {
   });
 
   const totalCapital = allBalances.reduce((sum, b) => sum + Math.abs(b.amount), 0);
+
+  function groupByNormalizedCurrency(
+    rows: { total: unknown; currency: string }[]
+  ): Map<string, number> {
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const norm = normalizeCurrency(r.currency);
+      const total = Math.abs(Number(r.total));
+      map.set(norm, (map.get(norm) || 0) + total);
+    }
+    return map;
+  }
 
   const incomeByCurrency = db.select({
     total: sql`COALESCE(SUM(${operationEntries.amount}), 0)`,
@@ -88,18 +113,18 @@ export async function GET(request: Request) {
     .all();
 
   let income = 0;
-  let incomeConverted = 0;
   let expense = 0;
+  let incomeConverted = 0;
   let expenseConverted = 0;
 
-  for (const row of incomeByCurrency) {
-    income += Math.abs(Number(row.total));
-    const conv = convertAmount(Math.abs(Number(row.total)), row.currency, baseCurrency);
+  for (const [norm, total] of groupByNormalizedCurrency(incomeByCurrency)) {
+    income += total;
+    const conv = convertAmount(total, norm, baseCurrency);
     if (conv) incomeConverted += conv.converted;
   }
-  for (const row of expenseByCurrency) {
-    expense += Math.abs(Number(row.total));
-    const conv = convertAmount(Math.abs(Number(row.total)), row.currency, baseCurrency);
+  for (const [norm, total] of groupByNormalizedCurrency(expenseByCurrency)) {
+    expense += total;
+    const conv = convertAmount(total, norm, baseCurrency);
     if (conv) expenseConverted += conv.converted;
   }
 

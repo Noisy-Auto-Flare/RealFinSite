@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { accountAddresses, accounts } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { accountAddresses, accounts, operations, operationEntries } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 import { syncAddressBalance } from "@/lib/scanners/runner";
 import { recalculateAllBalances } from "@/lib/balances";
@@ -19,6 +19,14 @@ export async function POST() {
     .innerJoin(accounts, eq(accountAddresses.accountId, accounts.id))
     .where(eq(accounts.userId, userId))
     .all();
+
+  // Clean up legacy untagged balance corrections (migration to per-address tagging)
+  const legacyOps = db.select({ id: operations.id }).from(operations)
+    .where(and(eq(operations.source, "balance_correction"), eq(operations.status, "confirmed"))).all();
+  for (const op of legacyOps) {
+    db.delete(operationEntries).where(eq(operationEntries.operationId, op.id)).run();
+    db.delete(operations).where(eq(operations.id, op.id)).run();
+  }
 
   const results: {
     accountId: number;
