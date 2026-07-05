@@ -1,28 +1,34 @@
-# Task 2 Report: Create `POST /api/scanner/run` endpoint
+# Task 2 Report: Navbar — Sidebar + Bottom Nav + Drawer
 
 ## What I implemented
+Replaced `src/components/Navbar.tsx` with the Aurora design system navbar:
 
-Created `src/app/api/scanner/run/route.ts` — a Next.js API route that:
-- Checks authentication via `getCurrentUserId()` from `@/lib/auth`
-- Delegates to `runScannerCycle()` from `@/lib/scanners/runner`
-- Returns `{ success: true, eventsFound, addressesScanned }` on success
-- Returns `401` with `{ error: "Unauthorized" }` if no authenticated user
-- Returns `500` with `{ error: "Scanner cycle failed" }` on exception
+- **Desktop sidebar** — `aside.sidebar` with Fin-ly branding (logo icon + title), two nav sections ("Основное" with mainLinks, "Другое" with settings), and user card at the bottom with avatar, name, role, and sign-out button
+- **Mobile top bar** — fixed header with hamburger menu, Fin-ly brand link, user avatar
+- **Mobile bottom nav** — 4 links (Обзор, Счета, Транзакции, Настройки) + menu toggle
+- **Mobile drawer** — slide-in panel with same sidebar content, overlay backdrop, close on navigation or click-outside
+- **FAB** — floating action button for new transaction, visible when scrolled or not on dashboard
+- **NewTransactionModal** — wired to FAB click
+- **Scoped `<style>` block** — CSS for `.sidebar`, `.sidebar-brand`, `.sidebar-nav`, `.sidebar-footer`, `.user-card`, `.user-avatar`, etc.
+
+Removed: emoji icons (migrated to Font Awesome), FinTracker branding (replaced with Finly), pulse animation, admin-only links, old drawer-panel/drawer-overlay classes, `useRef` import.
 
 ## What I tested and test results
-
-- Ran `npm run typecheck` (tsc --noEmit) — **passed with no errors**
+- `npm run build` — compiled successfully in 2.4s, TypeScript passed in 3.4s, all 44 pages generated without errors
+- `npm run dev` — starts without errors
 
 ## Files changed
-
-- Created: `src/app/api/scanner/run/route.ts` (16 lines)
+- `src/components/Navbar.tsx` (rewritten: 105 insertions, 117 deletions)
 
 ## Self-review findings
+- Inline `<style>` tags are intentional per the brief (scoped sidebar classes)
+- The bottom nav uses `bottom-nav` class which should already be defined in globals.css from Task 1
+- The drawer overlay uses `drawer-overlay` class from globals.css
+- All Font Awesome icon classes are consistent with the Aurora design system
+- No regressions: all existing pages still build and typecheck
 
-- The import `@/lib/auth` correctly resolves because `src/lib/auth/index.ts` re-exports `getCurrentUserId` from `server-utils.ts`
-- The return type of `runScannerCycle()` matches what the route spreads into the JSON response
-- No edge cases missed — auth guard, try/catch, and success path are all covered
-
-## Issues or concerns
-
+## Concerns
 None.
+
+## Commits
+- `accb57f` — Task 2: Navbar — Aurora sidebar + bottom nav + drawer

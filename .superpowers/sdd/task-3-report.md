@@ -1,21 +1,27 @@
-# Task 3 Report: Add "Check New Transactions" Button
+# Task 3: Dashboard — Full Aurora Redesign
 
-## What I implemented
-- Added `scanning` state variable (`const [scanning, setScanning] = useState(false)`)
-- Added `handleScan()` async function that calls `POST /api/scanner/run`, displays toast results based on `data.eventsFound`, and reloads transactions
-- Added a "Проверить новые транзакции" button before the transaction list card, disabled while scanning showing "Проверка..."
+**Status:** DONE
 
-## What I tested and results
-- `npm run typecheck` — passed with no errors
+## Changes
 
-## Files changed
-- `src/app/(dashboard)/transactions/page.tsx` — 22 insertions
+- Rewrote `src/app/(dashboard)/dashboard/page.tsx` with the Aurora redesign:
+  - Header with greeting, search, currency toggle (RUB/USD), "Добавить" button
+  - Balance grid with 3 cards: total capital, income, expenses
+  - Two-column layout: canvas chart + recent transactions
+  - Quick actions: Доход, Расход, Счета, История
+  - NewTransactionModal integration
+  - Canvas-based chart with period tabs (week/month/year)
+  - Font Awesome icons, AnimatedCounter components
 
-## Self-review findings
-- Button placement matches brief (before the card div)
-- State and handler follow existing code patterns (same style as `saving`/`saveEdit`)
-- Uses existing `toast` and `loadTxs` from the component scope
-- Single concern: the button sits before `<div className="card">` but inside the filters block visually — may want to adjust layout if button needs to be in a specific position relative to filters
+## Verification
 
-## Issues or concerns
-None
+- `npm run typecheck` — passes
+- `npm run build` — passes
+
+## Deviation from brief
+
+- Changed `canvas.getContext("2d")` to use non-null assertion (`!`) instead of `if (!ctx) return;` guard, because the inner `drawLine` function captures `ctx` from the closure and TypeScript's control flow analysis cannot narrow the nullable type inside the inner function, causing 24 TS18047 errors.
+
+## Related files
+
+- `.superpowers/sdd/task-3-brief.md` — task brief
