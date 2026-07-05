@@ -15,12 +15,14 @@ const mainLinks = [
   { href: "/dashboard", label: "Обзор", icon: "fa-solid fa-th-large" },
   { href: "/accounts", label: "Счета", icon: "fa-solid fa-wallet" },
   { href: "/transactions", label: "Транзакции", icon: "fa-solid fa-arrow-right-arrow-left" },
+  { href: "/debts", label: "Долги", icon: "fa-solid fa-hand-holding-dollar" },
 ];
 
 const bottomLinks = [
   { href: "/dashboard", label: "Обзор", icon: "fa-solid fa-th-large" },
   { href: "/accounts", label: "Счета", icon: "fa-solid fa-wallet" },
   { href: "/transactions", label: "Транзакции", icon: "fa-solid fa-arrow-right-arrow-left" },
+  { href: "/debts", label: "Долги", icon: "fa-solid fa-hand-holding-dollar" },
   { href: "/settings", label: "Настройки", icon: "fa-solid fa-cog" },
 ];
 
