@@ -4,7 +4,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { getScanner, RawBlockchainEvent } from "./interface";
 import { recalculateAllBalances } from "@/lib/balances";
 import { markDirty } from "@/lib/beancount/dirty-flag";
-import { getTokenMetadata } from "@/lib/token-metadata";
+import { getTokenMetadata } from "@/lib/tokens";
 
 export const NATIVE_CURRENCIES: Record<string, string> = {
   bsc: "BNB",
