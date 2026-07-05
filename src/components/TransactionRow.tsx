@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { formatAmount } from "@/lib/formatting";
 
 interface OperationSummary {
   id: number;
@@ -24,11 +25,6 @@ function getStatusBadge(status: string) {
     case "pending": return <span className="badge badge-pending">🔵</span>;
     default: return <span className="badge badge-pending">{status}</span>;
   }
-}
-
-function formatAmount(amount: number, currency: string) {
-  const sym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥", USDT: "USDT", SOL: "SOL", BNB: "BNB", TON: "TON" };
-  return `${amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym[currency] || currency}`;
 }
 
 export default memo(function TransactionRow({ tx, onEdit, onDelete }: TransactionRowProps) {

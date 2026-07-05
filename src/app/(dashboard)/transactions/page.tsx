@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatAmount } from "@/lib/formatting";
 import Select from "@/components/Select";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
@@ -67,11 +68,6 @@ export default function TransactionsPage() {
       .catch(() => {
         setLoading(false);
       });
-  }
-
-  function formatAmount(amount: number, currency: string) {
-    const sym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥", USDT: "USDT", SOL: "SOL", BNB: "BNB", TON: "TON" };
-    return `${amount.toLocaleString("ru-RU", { minimumFractionDigits: 2 })} ${sym[currency] || currency}`;
   }
 
   const totalPages = Math.ceil(total / limit);

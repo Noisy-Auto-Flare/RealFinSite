@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { formatAmount } from "@/lib/formatting";
 import EmptyState from "@/components/EmptyState";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
@@ -116,11 +117,6 @@ export default function DashboardPage() {
       .sort(([, a], [, b]) => b - a)
       .map(([name, value], i) => ({ name, value, color: CHART_COLORS[i % CHART_COLORS.length] }));
   }, [summary]);
-
-  function formatAmount(amount: number, currency: string) {
-    const sym: Record<string, string> = { RUB: "₽", USD: "$", CNY: "¥", USDT: "USDT", SOL: "SOL", BNB: "BNB", TON: "TON" };
-    return `${amount.toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${sym[currency] || currency}`;
-  }
 
   const sym = (cur: string) => baseSym[cur] || cur;
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS, formatAmount } from "@/lib/utils";
+import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS } from "@/lib/utils";
+import { formatAmount } from "@/lib/formatting";
 import type { AccountType } from "@/lib/utils";
 import Select from "@/components/Select";
 import { useToast } from "@/components/Toast";
