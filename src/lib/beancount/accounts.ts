@@ -1,4 +1,6 @@
-import type { Database } from "better-sqlite3";
+import { db } from "@/db";
+import { accounts, operations } from "@/db/schema";
+import { and, isNotNull, ne, sql, eq } from "drizzle-orm";
 
 export interface AccountInfo {
   id: number;
@@ -33,14 +35,27 @@ export function commodityDirective(currency: string): string {
   return `commodity ${currency}`;
 }
 
-export function getAllAccountsInfo(sqlite: Database): AccountInfo[] {
-  return sqlite.prepare("SELECT id, user_id as userId, name, currency FROM accounts").all() as AccountInfo[];
+export function getAllAccountsInfo(): AccountInfo[] {
+  return db.select({
+    id: accounts.id,
+    userId: accounts.userId,
+    name: accounts.name,
+    currency: accounts.currency,
+  }).from(accounts).all();
 }
 
-export function getUniqueCategories(sqlite: Database): { category: string; count: number }[] {
-  return sqlite.prepare(`
-    SELECT category, COUNT(*) as count FROM operations
-    WHERE category IS NOT NULL AND category != '' AND status = 'confirmed'
-    GROUP BY category ORDER BY count DESC
-  `).all() as { category: string; count: number }[];
+export function getUniqueCategories(): { category: string; count: number }[] {
+  return db.select({
+    category: operations.category,
+    count: sql<number>`COUNT(*)`,
+  })
+    .from(operations)
+    .where(and(
+      isNotNull(operations.category),
+      ne(operations.category, ""),
+      eq(operations.status, "confirmed"),
+    ))
+    .groupBy(operations.category)
+    .orderBy(sql`COUNT(*) DESC`)
+    .all() as { category: string; count: number }[];
 }

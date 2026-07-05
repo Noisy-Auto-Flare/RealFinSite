@@ -1,7 +1,9 @@
-import type { Database } from "better-sqlite3";
+import { db } from "@/db";
+import { operations, operationEntries } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
 import path from "path";
 import fs from "fs";
-import { clearDirty, getDirtySqlite } from "./dirty-flag";
+import { clearDirty } from "./dirty-flag";
 import { operationToBeancount, OperationRow, EntryRow } from "./generate";
 import { getUniqueCategories, openDirective, commodityDirective, accountPath, feesPath, incomePath, expensePath } from "./accounts";
 
@@ -12,57 +14,57 @@ function getLedgerPath(): string {
   return path.join(dir, "ledger.beancount");
 }
 
-export function regenerate(sqlite?: Database): void {
-  const s = sqlite ?? getDirtySqlite();
-
+export function regenerate(): void {
   const ledgerPath = getLedgerPath();
   const lines: string[] = [];
 
-  // Header
   lines.push('option "title" "FinTracker Ledger"');
   lines.push('option "operating_currency" "RUB"');
   lines.push("");
 
-  // Get all unique currencies from confirmed operations and accounts
-  const currencies = s.prepare(`
-    SELECT DISTINCT currency FROM (
+  const currencies = db.select({
+    currency: sql<string>`DISTINCT currency`,
+  })
+    .from(sql`(
       SELECT oe.currency FROM operation_entries oe
       JOIN operations o ON oe.operation_id = o.id
       WHERE o.status = 'confirmed'
       UNION
       SELECT currency FROM accounts
-    ) ORDER BY currency
-  `).all() as { currency: string }[];
+    )`)
+    .orderBy(sql`currency`)
+    .all() as { currency: string }[];
 
   for (const c of currencies) {
     lines.push(commodityDirective(c.currency));
   }
   lines.push("");
 
-  // Open directives for all accounts + currencies that have activity
-  const accountCurrencyPairs = s.prepare(`
-    SELECT DISTINCT oe.account_id, oe.currency, o.user_id,
-      MIN(o.date) as first_date
-    FROM operation_entries oe
-    JOIN operations o ON oe.operation_id = o.id
-    WHERE o.status = 'confirmed'
-    GROUP BY oe.account_id, oe.currency
-    ORDER BY first_date
-  `).all() as { account_id: number; currency: string; user_id: number; first_date: string }[];
+  const accountCurrencyPairs = db.select({
+    accountId: operationEntries.accountId,
+    currency: operationEntries.currency,
+    userId: operations.userId,
+    firstDate: sql<string>`MIN(${operations.date})`,
+  })
+    .from(operationEntries)
+    .innerJoin(operations, eq(operationEntries.operationId, operations.id))
+    .where(eq(operations.status, "confirmed"))
+    .groupBy(operationEntries.accountId, operationEntries.currency)
+    .orderBy(sql`MIN(${operations.date})`)
+    .all() as { accountId: number; currency: string; userId: number; firstDate: string }[];
 
   const seenAccounts = new Set<string>();
   for (const ac of accountCurrencyPairs) {
-    const acc = accountPath(ac.account_id, ac.user_id, ac.currency);
-    const key = `${ac.account_id}:${ac.currency}`;
+    const acc = accountPath(ac.accountId, ac.userId, ac.currency);
+    const key = `${ac.accountId}:${ac.currency}`;
     if (!seenAccounts.has(key)) {
       seenAccounts.add(key);
-      const openDate = ac.first_date || "2024-01-01";
+      const openDate = ac.firstDate || "2024-01-01";
       lines.push(openDirective(acc, openDate));
     }
   }
 
-  // Open directives for Income/Expense categories and Fees
-  const categories = getUniqueCategories(s);
+  const categories = getUniqueCategories();
   const seenIncomeExpense = new Set<string>();
   for (const cat of categories) {
     const inc = incomePath(cat.category);
@@ -79,29 +81,36 @@ export function regenerate(sqlite?: Database): void {
   lines.push(openDirective(feesPath(), "2024-01-01"));
   lines.push("");
 
-  // Transactions: all confirmed operations sorted by date
-  const ops = s.prepare(`
-    SELECT id, user_id as userId, description, category, date
-    FROM operations
-    WHERE status = 'confirmed'
-    ORDER BY date, id
-  `).all() as OperationRow[];
+  const ops = db.select({
+    id: operations.id,
+    userId: operations.userId,
+    description: operations.description,
+    category: operations.category,
+    date: operations.date,
+  })
+    .from(operations)
+    .where(eq(operations.status, "confirmed"))
+    .orderBy(operations.date, operations.id)
+    .all() as OperationRow[];
 
   for (const op of ops) {
-    const entries = s.prepare(`
-      SELECT account_id as accountId, currency, amount, type
-      FROM operation_entries
-      WHERE operation_id = ?
-      ORDER BY id
-    `).all(op.id) as EntryRow[];
+    const entries = db.select({
+      accountId: operationEntries.accountId,
+      currency: operationEntries.currency,
+      amount: operationEntries.amount,
+      type: operationEntries.type,
+    })
+      .from(operationEntries)
+      .where(eq(operationEntries.operationId, op.id))
+      .orderBy(operationEntries.id)
+      .all() as EntryRow[];
 
     lines.push(operationToBeancount(op, entries));
   }
 
-  // Write atomically
   const tmpPath = ledgerPath + ".tmp";
   fs.writeFileSync(tmpPath, lines.join("\n"), "utf-8");
   fs.renameSync(tmpPath, ledgerPath);
 
-  clearDirty(s);
+  clearDirty();
 }
