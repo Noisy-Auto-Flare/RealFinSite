@@ -26,20 +26,6 @@ interface Entry {
 const CURRENCIES = ["RUB", "USD", "USDT", "CNY", "SOL", "BNB", "TON"];
 const STEPS = ["Основное", "Записи", "Проверка"];
 
-const CATEGORIES = [
-  { value: "", label: "Без категории" },
-  { value: "Зарплата", label: "Зарплата" },
-  { value: "Продукты", label: "Продукты" },
-  { value: "Транспорт", label: "Транспорт" },
-  { value: "Комиссия", label: "Комиссия сети / банка" },
-  { value: "Перевод маме", label: "Перевод маме" },
-  { value: "Перевод другому", label: "Перевод другому" },
-  { value: "Обмен", label: "Обмен валют" },
-  { value: "Вывод с биржи", label: "Вывод с биржи" },
-  { value: "Пополнение", label: "Пополнение" },
-  { value: "Другое", label: "Другое" },
-];
-
 function StepIndicator({ steps, current }: { steps: string[]; current: number }) {
   return (
     <div className="flex items-center px-4 pt-3 pb-2">
@@ -103,7 +89,6 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
   const [step, setStep] = useState(0);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
   const [entries, setEntries] = useState<Entry[]>([
     { accountId: "", currency: "RUB", amount: "", type: "principal" },
   ]);
@@ -112,9 +97,15 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
   const [error, setError] = useState("");
   const [createdOperation, setCreatedOperation] = useState<any>(null);
   const [confirmingFees, setConfirmingFees] = useState(false);
+  const [allTags, setAllTags] = useState<{ id: number; name: string; color: string | null }[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/accounts").then((r) => r.json()).then(setAccounts);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/tags").then(r => r.json()).then(setAllTags).catch(() => {});
   }, []);
 
   function addEntry() {
@@ -143,7 +134,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
     const body = {
       date,
       description: description || null,
-      category: category || null,
+      tags: selectedTags,
       status: "confirmed",
       entries: entries.map((e) => ({
         accountId: Number(e.accountId),
@@ -218,7 +209,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
   function reset() {
     setDate(new Date().toISOString().split("T")[0]);
     setDescription("");
-    setCategory("");
+    setSelectedTags([]);
     setEntries([{ accountId: "", currency: "RUB", amount: "", type: "principal" }]);
     setError("");
     setStep(0);
@@ -332,13 +323,31 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Категория</label>
-                  <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>{c.label}</option>
+                <div className="form-group">
+                  <label className="form-label">Теги</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTags((prev) =>
+                            prev.includes(tag.name)
+                              ? prev.filter((t) => t !== tag.name)
+                              : [...prev, tag.name]
+                          );
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+                          selectedTags.includes(tag.name)
+                            ? "bg-[var(--accent)]/20 border-[var(--accent)] text-[var(--accent)]"
+                            : "bg-[var(--bg-card)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--text-muted)]"
+                        }`}
+                        style={selectedTags.includes(tag.name) ? { borderColor: tag.color || undefined, color: tag.color || undefined } : undefined}
+                      >
+                        {tag.name}
+                      </button>
                     ))}
-                  </Select>
+                  </div>
                 </div>
               </>
             )}
@@ -461,8 +470,8 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                       <span className="text-right max-w-[60%] truncate">{description || "—"}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-[var(--text-muted)]">Категория</span>
-                      <span>{category || "—"}</span>
+                      <span className="text-[var(--text-muted)]">Теги</span>
+                      <span className="text-right max-w-[60%] truncate">{selectedTags.length > 0 ? selectedTags.join(", ") : "—"}</span>
                     </div>
                   </div>
 
