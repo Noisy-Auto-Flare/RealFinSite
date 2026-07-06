@@ -20,7 +20,7 @@ interface Address {
 
 interface Balance {
   currency: string;
-  amount: number;
+  amount: string;
 }
 
 export default function NewAccountPage() {
@@ -44,7 +44,9 @@ export default function NewAccountPage() {
     setLoading(true);
     setError("");
 
-    const filteredBalances = initialBalances.filter((b) => b.currency);
+    const filteredBalances = initialBalances
+      .filter((b) => b.currency)
+      .map((b) => ({ currency: b.currency, amount: parseFloat(b.amount.replace(",", ".")) || 0 }));
     const body: Record<string, unknown> = {
       name,
       type,
@@ -275,8 +277,7 @@ export default function NewAccountPage() {
                     value={bal.amount || ""}
                     onChange={(e) => {
                       const copy = [...initialBalances];
-                      const raw = e.target.value.replace(/[^0-9.,\-]/g, "");
-                      copy[idx].amount = parseFloat(raw.replace(",", ".")) || 0;
+                      copy[idx].amount = e.target.value.replace(/[^0-9.,\-]/g, "");
                       setInitialBalances(copy);
                     }}
                     placeholder="Сумма"
@@ -292,7 +293,7 @@ export default function NewAccountPage() {
               ))}
 
               <button
-                onClick={() => setInitialBalances([...initialBalances, { currency: "", amount: 0 }])}
+                onClick={() => setInitialBalances([...initialBalances, { currency: "", amount: "" }])}
                 className="btn btn-secondary w-full text-sm"
               >
                 + Добавить баланс
