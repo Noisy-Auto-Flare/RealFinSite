@@ -149,6 +149,7 @@ export async function GET(request: Request) {
   const status = searchParams.get("status");
   const searchQ = searchParams.get("search");
   const relatedOnly = searchParams.get("related") === "true";
+  const tagName = searchParams.get("tag");
 
   const conditions = [eq(operations.userId, userId)];
   if (dateFrom) conditions.push(gte(operations.date, dateFrom));
@@ -163,6 +164,13 @@ export async function GET(request: Request) {
         WHERE user_id = ${userId} AND tx_hash IS NOT NULL
         GROUP BY tx_hash HAVING COUNT(*) > 1
       )
+    )`);
+  }
+  if (tagName) {
+    conditions.push(sql`${operations.id} IN (
+      SELECT ot.operation_id FROM operation_tags ot
+      INNER JOIN tags t ON t.id = ot.tag_id
+      WHERE t.name = ${tagName}
     )`);
   }
 

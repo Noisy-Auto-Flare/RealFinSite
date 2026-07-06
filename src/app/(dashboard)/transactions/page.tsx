@@ -46,6 +46,8 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0);
 
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterTag, setFilterTag] = useState("");
+  const [allTags, setAllTags] = useState<{ name: string; color: string }[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showNewTx, setShowNewTx] = useState(false);
@@ -68,7 +70,7 @@ export default function TransactionsPage() {
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
 
-  useEffect(() => { setPage(0); }, [filterStatus, searchQuery, relatedOnly]);
+  useEffect(() => { setPage(0); }, [filterStatus, filterTag, searchQuery, relatedOnly]);
 
   function loadGroups() {
     fetch("/api/groups").then(r => r.json()).then((list) => {
@@ -78,6 +80,9 @@ export default function TransactionsPage() {
     });
   }
   useEffect(() => { loadGroups(); }, []);
+  useEffect(() => {
+    fetch("/api/tags").then(r => r.json()).then(setAllTags).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!expandedGroupId) { setGroupOperations([]); return; }
@@ -87,7 +92,7 @@ export default function TransactionsPage() {
       .catch(() => {});
   }, [expandedGroupId]);
 
-  useEffect(() => { loadTxs(); }, [page, filterStatus, searchQuery]);
+  useEffect(() => { loadTxs(); }, [page, filterStatus, filterTag, searchQuery]);
 
   function loadTxs() {
     setLoading(true);
@@ -96,6 +101,7 @@ export default function TransactionsPage() {
     params.set("page", String(page + 1));
     if (filterStatus) params.set("status", filterStatus);
     if (searchQuery) params.set("search", searchQuery);
+    if (filterTag) params.set("tag", filterTag);
     if (relatedOnly) params.set("related", "true");
 
     fetch(`/api/operations?${params.toString()}`)
@@ -255,6 +261,12 @@ export default function TransactionsPage() {
               <option value="confirmed">Подтверждённые</option>
               <option value="pending">Черновики</option>
             </Select>
+            <Select value={filterTag} onChange={(e) => setFilterTag(e.target.value)} className="w-auto min-w-[120px]">
+              <option value="">Все тэги</option>
+              {allTags.map(t => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </Select>
 
             <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
               {total} операций
@@ -363,6 +375,15 @@ export default function TransactionsPage() {
                         <span className="ml-auto shrink-0">{formatAmount(e.amount, e.currency)}</span>
                       </div>
                     ))}
+                    {tx.tags && tx.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {tx.tags.map(tag => (
+                          <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {!selectMode && (
                     <button
