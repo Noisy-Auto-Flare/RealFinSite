@@ -31,8 +31,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN apk add --no-cache curl python3 py3-pip build-base python3-dev pkgconfig m4 && \
     pip3 install --break-system-packages beancount fava supervisor && \
     apk del build-base python3-dev pkgconfig m4 && \
-    mkdir -p /data /logs /backups && \
-    chown nextjs:nodejs /data /logs /backups
+    mkdir -p /data /logs /backups /app/data && \
+    touch /data/ledger.beancount && \
+    chown -R nextjs:nodejs /data /logs /backups /app/data
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
