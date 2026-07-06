@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     userId,
     personName: body.personName,
     description: body.description || null,
-    amount: body.amount,
+    amount: typeof body.amount === "string" ? parseFloat(body.amount.replace(",", ".")) : body.amount,
     currency: body.currency || "RUB",
     status: "active",
   }).returning().get();

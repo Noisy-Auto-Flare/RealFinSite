@@ -40,7 +40,7 @@ export default function DebtsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         personName: newName,
-        amount: parseFloat(newAmount),
+        amount: parseFloat(newAmount.replace(",", ".")),
         currency: newCurrency,
         description: newDesc || null,
       }),
@@ -94,7 +94,7 @@ export default function DebtsPage() {
         <form onSubmit={handleCreate} className="card p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input className="form-input" placeholder="Имя" value={newName} onChange={e => setNewName(e.target.value)} required />
-            <input className="form-input" type="number" step="0.01" placeholder="Сумма" value={newAmount} onChange={e => setNewAmount(e.target.value)} required />
+            <input className="form-input" type="text" inputMode="decimal" placeholder="Сумма" value={newAmount} onChange={e => setNewAmount(e.target.value.replace(/[^0-9.,\-]/g, ""))} required />
             <select className="form-input" value={newCurrency} onChange={e => setNewCurrency(e.target.value)}>
               {["RUB", "USD", "USDT", "CNY"].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
