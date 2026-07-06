@@ -28,9 +28,9 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-RUN apk add --no-cache curl python3 py3-pip build-base python3-dev pkgconfig && \
+RUN apk add --no-cache curl python3 py3-pip build-base python3-dev pkgconfig m4 && \
     pip3 install --break-system-packages beancount fava supervisor && \
-    apk del build-base python3-dev pkgconfig && \
+    apk del build-base python3-dev pkgconfig m4 && \
     mkdir -p /data /logs /backups && \
     chown nextjs:nodejs /data /logs /backups
 
