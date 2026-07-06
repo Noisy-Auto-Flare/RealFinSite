@@ -15,7 +15,7 @@ const sqlite = new DatabaseClass(dbPath);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 function getSchemaVersion(s: Database): number {
   try {
@@ -228,6 +228,7 @@ export function runMigrations(sqlitep?: Database): void {
     base_currency TEXT NOT NULL,
     quote_currency TEXT NOT NULL,
     rate REAL NOT NULL,
+    change_24h REAL,
     source TEXT DEFAULT 'coingecko',
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`);
@@ -252,6 +253,7 @@ export function runMigrations(sqlitep?: Database): void {
   console.log("\n[exchange_rates]");
   addColumn(s, "exchange_rates", "source", "TEXT DEFAULT 'coingecko'");
   addColumn(s, "exchange_rates", "updated_at", "TEXT DEFAULT CURRENT_TIMESTAMP");
+  addColumn(s, "exchange_rates", "change_24h", "REAL");
   createIndex(s, "pair_unique", "exchange_rates", "base_currency, quote_currency", true);
 
   console.log("\n[api_credentials]");

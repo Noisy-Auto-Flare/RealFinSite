@@ -25,6 +25,17 @@ interface CoinGeckoPriceResponse {
   };
 }
 
+interface CoinGeckoPriceWithChange {
+  [coinId: string]: {
+    usd?: number;
+    usd_24h_change?: number;
+    rub?: number;
+    rub_24h_change?: number;
+    cny?: number;
+    cny_24h_change?: number;
+  };
+}
+
 export async function fetchAndStoreRates(): Promise<void> {
   const apiKey = process.env.COINGECKO_API_KEY;
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -33,8 +44,8 @@ export async function fetchAndStoreRates(): Promise<void> {
   const allIds = [...new Set(Object.values(CRYPTO_COIN_IDS).flat())].join(",");
   const vsCurrencies = ["usd", "rub", "cny"].join(",");
 
-  // Fetch crypto prices in USD, RUB, CNY
-  const cryptoUrl = `${COINGECKO_BASE}/simple/price?ids=${allIds}&vs_currencies=${vsCurrencies}`;
+  // Fetch crypto prices in USD, RUB, CNY with 24h change
+  const cryptoUrl = `${COINGECKO_BASE}/simple/price?ids=${allIds}&vs_currencies=${vsCurrencies}&include_24hr_change=true`;
   const cryptoRes = await fetch(cryptoUrl, { headers, next: { revalidate: 300 } });
 
   if (!cryptoRes.ok) {
@@ -42,7 +53,7 @@ export async function fetchAndStoreRates(): Promise<void> {
     return;
   }
 
-  let cryptoData: CoinGeckoPriceResponse;
+  let cryptoData: CoinGeckoPriceWithChange;
   try {
     cryptoData = await cryptoRes.json();
   } catch {
@@ -52,19 +63,19 @@ export async function fetchAndStoreRates(): Promise<void> {
 
   // Store crypto → fiat rates (use first coin ID that returns data)
   for (const [symbol, coinIds] of Object.entries(CRYPTO_COIN_IDS)) {
-    const prices = coinIds.reduce<{ usd?: number; rub?: number; cny?: number } | null>(
+    const prices = coinIds.reduce<CoinGeckoPriceWithChange[string] | null>(
       (found, id) => found || cryptoData[id] || null, null
     );
     if (!prices) continue;
 
     if (prices.usd) {
-      upsertRate(symbol, "USD", prices.usd);
+      upsertRate(symbol, "USD", prices.usd, prices.usd_24h_change);
     }
     if (prices.rub) {
-      upsertRate(symbol, "RUB", prices.rub);
+      upsertRate(symbol, "RUB", prices.rub, prices.rub_24h_change);
     }
     if (prices.cny) {
-      upsertRate(symbol, "CNY", prices.cny);
+      upsertRate(symbol, "CNY", prices.cny, prices.cny_24h_change);
     }
   }
 
@@ -82,7 +93,6 @@ export async function fetchAndStoreRates(): Promise<void> {
     }
     const tether = fiatData["tether"];
     if (tether) {
-      if (tether.rub) upsertRate("USD", "RUB", tether.rub);
       if (tether.cny) upsertRate("USD", "CNY", tether.cny);
       if (tether.eur) upsertRate("USD", "EUR", tether.eur);
     }
@@ -97,14 +107,17 @@ export async function fetchAndStoreRates(): Promise<void> {
   console.log(`Rates updated: ${new Date().toISOString()}`);
 }
 
-function upsertRate(base: string, quote: string, rate: number) {
+function upsertRate(base: string, quote: string, rate: number, change24h?: number | null, source?: string) {
   const existing = db.select().from(exchangeRates).where(
     and(eq(exchangeRates.baseCurrency, base), eq(exchangeRates.quoteCurrency, quote))
   ).get();
 
   if (existing) {
+    const updates: Record<string, unknown> = { rate, updatedAt: new Date().toISOString() };
+    if (change24h !== undefined) updates.change24h = change24h;
+    if (source !== undefined) updates.source = source;
     db.update(exchangeRates)
-      .set({ rate, updatedAt: new Date().toISOString() })
+      .set(updates)
       .where(eq(exchangeRates.id, existing.id))
       .run();
   } else {
@@ -112,7 +125,8 @@ function upsertRate(base: string, quote: string, rate: number) {
       baseCurrency: base,
       quoteCurrency: quote,
       rate,
-      source: "coingecko",
+      change24h: change24h ?? null,
+      source: source || "coingecko",
     }).run();
   }
 }
@@ -177,6 +191,31 @@ export function convertAmount(
 
 export function isKnownCurrency(currency: string): boolean {
   return ALL_SUPPORTED.includes(currency);
+}
+
+export function parseCbrXml(xml: string): number | null {
+  const match = xml.match(/<CharCode>USD<\/CharCode>[\s\S]*?<Value>([\d,]+)<\/Value>/);
+  if (!match) return null;
+  return parseFloat(match[1].replace(",", "."));
+}
+
+export function cbrDateParam(date?: Date): string {
+  const d = date ?? new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+export async function fetchCbrRates(): Promise<void> {
+  const url = `https://www.cbr.ru/scripts/XML_daily.asp?date_req=${cbrDateParam()}`;
+  const res = await fetch(url, { next: { revalidate: 3600 }, cache: "no-store" });
+  if (!res.ok) throw new Error(`CBR fetch failed: ${res.status}`);
+  const xml = await res.text();
+  const rate = parseCbrXml(xml);
+  if (rate === null) throw new Error("CBR USD rate not found in XML response");
+  upsertRate("USD", "RUB", rate, null, "cbr");
+  console.log(`CBR USD/RUB: ${rate}`);
 }
 
 export { ALL_SUPPORTED as SUPPORTED_CURRENCIES };

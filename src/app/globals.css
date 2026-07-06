@@ -348,6 +348,51 @@ body {
   color: var(--danger);
 }
 
+.rates-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.rate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  min-width: 0;
+  transition: border-color 0.2s;
+}
+
+.rate-card:hover {
+  border-color: var(--border);
+}
+
+.rate-symbol {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rate-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'Onest', sans-serif;
+  color: var(--text-primary);
+}
+
+.rate-change {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -935,6 +980,8 @@ input:focus, textarea:focus {
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
   .chart-card .chart-header { flex-direction: column; align-items: stretch; gap: 10px; }
   .chart-card .chart-header .chart-tabs { align-self: flex-start; }
+  .rates-bar { display: grid; grid-template-columns: repeat(2, 1fr); overflow-x: visible; }
+  .rate-card { min-width: 0; }
   .tx-item { padding: 10px 12px; }
   .card { padding: 18px; }
 }

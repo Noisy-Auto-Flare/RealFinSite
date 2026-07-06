@@ -69,6 +69,9 @@ export default function DashboardPage() {
   const [showNewTx, setShowNewTx] = useState(false);
   const [period, setPeriod] = useState<"week" | "month" | "year">("week");
   const [debtsByCurrency, setDebtsByCurrency] = useState<Record<string, number>>({});
+  const [rates, setRates] = useState<Record<string, Record<string, number>>>({});
+  const [rateChanges, setRateChanges] = useState<Record<string, Record<string, number | null>>>({});
+  const [rateSources, setRateSources] = useState<Record<string, Record<string, string>>>({});
 
   function loadSummary(currency: string) {
     fetch(`/api/stats/summary?base_currency=${currency}`)
@@ -93,6 +96,10 @@ export default function DashboardPage() {
         }
         setDebtsByCurrency(byCurrency);
       })
+      .catch(() => {});
+    fetch("/api/rates")
+      .then(r => r.json())
+      .then((data) => { setRates(data.rates || {}); setRateChanges(data.changes || {}); setRateSources(data.sources || {}); })
       .catch(() => {});
   }, [baseCurrency]);
 
@@ -317,6 +324,51 @@ export default function DashboardPage() {
               : "—"}
           </div>
         </div>
+      </section>
+
+      <section className="rates-bar" aria-label="Курсы валют">
+        {["BTC", "ETH", "SOL", "BNB", "TON", "TRX", "AVAX", "USDC", "USDT"].map((crypto) => {
+          const usdRate = rates[crypto]?.USD;
+          if (!usdRate) return null;
+          const change = rateChanges[crypto]?.USD;
+          const changeColor = change != null ? (change >= 0 ? "#22c55e" : "#ef4444") : "var(--text-muted)";
+          const changeIcon = change != null ? (change >= 0 ? "fa-caret-up" : "fa-caret-down") : "";
+          return (
+            <div key={crypto} className="rate-card">
+              <span className="rate-symbol">{crypto}</span>
+              <span className="rate-value">
+                ${usdRate < 1 ? usdRate.toFixed(4) : usdRate.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+              {change != null && (
+                <span className="rate-change" style={{ color: changeColor }}>
+                  <i className={`fa-solid ${changeIcon}`} style={{ marginRight: 2 }} />
+                  {Math.abs(change).toFixed(2)}%
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {rates.USD?.RUB && (
+          <div className="rate-card">
+            <span className="rate-symbol">
+              USD/RUB
+              {rateSources.USD?.RUB === "cbr" && <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.6, marginLeft: 4 }}>ЦБ</span>}
+            </span>
+            <span className="rate-value">{rates.USD.RUB.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₽</span>
+          </div>
+        )}
+        {rates.USDT?.RUB && (
+          <div className="rate-card">
+            <span className="rate-symbol">USDT/RUB <span style={{ fontWeight: 400, fontSize: 10, opacity: 0.6 }}>Gecko</span></span>
+            <span className="rate-value">{rates.USDT.RUB.toLocaleString(undefined, { maximumFractionDigits: 2 })} ₽</span>
+            {rateChanges.USDT?.RUB != null && (
+              <span className="rate-change" style={{ color: rateChanges.USDT.RUB >= 0 ? "#22c55e" : "#ef4444" }}>
+                <i className={`fa-solid ${rateChanges.USDT.RUB >= 0 ? "fa-caret-up" : "fa-caret-down"}`} style={{ marginRight: 2 }} />
+                {Math.abs(rateChanges.USDT.RUB).toFixed(2)}%
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
       <div className="dashboard-grid">

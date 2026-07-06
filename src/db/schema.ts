@@ -117,6 +117,7 @@ export const exchangeRates = sqliteTable("exchange_rates", {
   baseCurrency: text("base_currency").notNull(),
   quoteCurrency: text("quote_currency").notNull(),
   rate: real("rate").notNull(),
+  change24h: real("change_24h"),
   source: text("source").default("coingecko"),
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP"),
 }, (table) => ({
