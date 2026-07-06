@@ -400,9 +400,12 @@ export default function TransactionsPage() {
 
             {/* Summary: from → to with accounts */}
             {(() => {
-              const fromOps = groupOperations.filter(o => o.entries.some(e => e.amount < 0 && e.type === "principal"));
+              // Fee ops detected by description starting with "Fee"
+              const feeOps = groupOperations.filter(o => o.description?.startsWith("Fee"));
+              const fromOps = groupOperations.filter(o =>
+                o.entries.some(e => e.amount < 0 && e.type === "principal") && !o.description?.startsWith("Fee")
+              );
               const toOps = groupOperations.filter(o => o.entries.some(e => e.amount > 0 && e.type === "principal"));
-              const feeOps = groupOperations.filter(o => o.entries.some(e => e.type === "fee"));
               const allCurrencies = [...new Set(groupOperations.flatMap(o => o.entries.map(e => e.currency)))];
               return (
                 <div className="space-y-3 mb-4 text-sm">
@@ -431,7 +434,7 @@ export default function TransactionsPage() {
                   {feeOps.length > 0 && (
                     <div>
                       <span className="text-[var(--text-muted)] text-xs font-medium">Комиссия</span>
-                      {feeOps.map(o => o.entries.filter(e => e.type === "fee").map((e, i) => (
+                      {feeOps.map(o => o.entries.map((e, i) => (
                         <div key={i} className="flex items-center gap-2 py-1">
                           <span className="font-medium">{e.accountName || "—"}</span>
                           <span className="text-red-400">{formatAmount(Math.abs(e.amount), e.currency)}</span>

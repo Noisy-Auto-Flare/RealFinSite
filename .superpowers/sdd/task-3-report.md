@@ -1,20 +1,24 @@
-# Task 3 Report: Debts API + Groups API
+# Task 3 Report: Selection Mode + Checkboxes + Link Bar + Color Coding
 
 **Status:** DONE
 
-## Deliverables
+**Commits made:**
+- `727a9ee` feat: interactive transaction linking with selection mode and color-coded groups
 
-### Files created
-| File | Lines | Endpoints |
-|------|-------|-----------|
-| `src/app/api/debts/route.ts` | 52 | `GET /api/debts`, `POST /api/debts` |
-| `src/app/api/debts/[id]/route.ts` | 48 | `PATCH /api/debts/[id]`, `DELETE /api/debts/[id]` |
-| `src/app/api/groups/route.ts` | 33 | `GET /api/groups`, `POST /api/groups` |
-| `src/app/api/groups/[id]/route.ts` | 80 | `GET /api/groups/[id]`, `DELETE /api/groups/[id]` |
+**Test results:**
+- `npm test`: 12 test files, 95 tests — all passed
+- `npm run dev`: Compiled successfully (Turbopack, Ready in 398ms)
 
-### Commit
-`f406096` — `feat: debts and groups CRUD API`
+**Edits applied (page.tsx):**
+1. Added `selectMode`, `selectedIds` state and `GROUP_COLORS` constant (after line 55)
+2. Replaced inline groups fetch with `loadGroups()` function + `useEffect`
+3. Replaced tab buttons with full selection-mode UI (Все/Связанные toggle, link button, counter)
+4. Replaced tx-item map with checkbox, group color borders, select-aware click handler
 
-### Verification
-- `npm run build` — compiled with 0 errors (1 pre-existing warning in health route)
-- All 4 routes registered in Next.js route table (`/api/debts`, `/api/debts/[id]`, `/api/groups`, `/api/groups/[id]`)
+**Verification checks:**
+- No duplicate variables or broken JSX — confirmed
+- `tx-item` onClick handles both selectMode (toggle selection) and non-selectMode (openEdit) — correct
+- Checkbox `stopPropagation` on parent div — correct
+- `GROUP_COLORS` accessible inside map callback (module-level const in component) — correct
+- `loadGroups()` called after successful link — correct
+- **CSS edit (Edit 5):** Skipped per brief instructions ("Actually, skip this")
