@@ -175,17 +175,28 @@ async function processEvent(
     isVerified: 1,
   }).run();
 
-  // Attach network fee as a separate entry (outgoing only — user pays the fee)
+  // Attach network fee as a separate operation (outgoing only — user pays the fee)
   if (evt.fee && isOutgoing) {
     const feeAmount = parseFloat(evt.fee.amount) / Math.pow(10, evt.fee.decimals);
     if (feeAmount > 0) {
+      const feeOp = db.insert(operations).values({
+        userId,
+        description: `Fee (${currency})`,
+        date: new Date(evt.timestamp * 1000).toISOString().split("T")[0],
+        source: `scanner_${network}`,
+        txHash: evt.txHash,
+        fromAddress: evt.fromAddress,
+        toAddress: evt.toAddress,
+        blockTimestamp: evt.timestamp,
+        status: "confirmed",
+      }).returning().get();
       db.insert(operationEntries).values({
-        operationId: op.id,
+        operationId: feeOp.id,
         accountId,
         currency: evt.fee.currency || currency,
         amount: -feeAmount,
-        type: "fee",
-        isVerified: 0,
+        type: "principal",
+        isVerified: 1,
       }).run();
     }
   }
