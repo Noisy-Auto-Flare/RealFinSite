@@ -1,17 +1,13 @@
-# Task 2: Tags API — CRUD + Seed
+# Task 2 Report: POST /api/groups — Batch Link Operations
 
 **Status:** DONE
 
-**Created files:**
-- `src/app/api/tags/route.ts` — GET (list all), POST (create + auto-seed on empty table)
-- `src/app/api/tags/[id]/route.ts` — DELETE by id
+**Commits:**
+- `2ad584d` feat: POST /api/groups accepts operationIds for batch linking
 
-**Verification:**
-- `npm run build` — compiled successfully, both routes registered:
-  - `ƒ /api/tags`
-  - `ƒ /api/tags/[id]`
+**Changes:**
+- `src/app/api/groups/route.ts` — Updated imports (`and`, `inArray` from drizzle-orm); modified POST handler to parse `operationIds` from request body, validate ownership, and batch-update `group_id` on matching operations.
 
-**Commit:**
-- `7915dc6` feat: tags API with auto-seed of default tags
+**Test results:** All 95 tests pass across 12 test files.
 
-**Summary:** Two route files created per brief spec. GET returns all tags, POST creates a tag (auto-seeds 13 default tags if table is empty), DELETE removes by id. Auth guard via `getCurrentUserId` on all endpoints.
+**Compilation:** `npm run dev` — Turbopack ready in 387ms (no errors).

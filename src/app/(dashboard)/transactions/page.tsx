@@ -53,6 +53,9 @@ export default function TransactionsPage() {
   const [groups, setGroups] = useState<Record<number, { firstOpDescription: string | null; opCount: number }>>({});
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [groupOperations, setGroupOperations] = useState<OperationSummary[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const GROUP_COLORS = ['#E9B1A3', '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F472B6'];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -67,13 +70,14 @@ export default function TransactionsPage() {
 
   useEffect(() => { setPage(0); }, [filterStatus, searchQuery, relatedOnly]);
 
-  useEffect(() => {
+  function loadGroups() {
     fetch("/api/groups").then(r => r.json()).then((list) => {
       const map: Record<number, { firstOpDescription: string | null; opCount: number }> = {};
       for (const g of list) map[g.id] = g;
       setGroups(map);
     });
-  }, []);
+  }
+  useEffect(() => { loadGroups(); }, []);
 
   useEffect(() => {
     if (!expandedGroupId) { setGroupOperations([]); return; }
@@ -172,23 +176,66 @@ export default function TransactionsPage() {
         </div>
       </header>
 
-      <div className="flex gap-1 mb-4">
-        {[
-          { key: false, label: "Все" },
-          { key: true, label: "Связанные" },
-        ].map(tab => (
+      <div className="flex gap-1 mb-4 items-center flex-wrap">
+        <button
+          onClick={() => {
+            setRelatedOnly(false);
+            setSelectMode(false);
+            setSelectedIds(new Set());
+          }}
+          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+            !selectMode && !relatedOnly
+              ? "bg-[var(--accent)] text-white"
+              : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Все
+        </button>
+        <button
+          onClick={() => {
+            if (selectMode) {
+              setSelectMode(false);
+              setSelectedIds(new Set());
+            } else {
+              setSelectMode(true);
+            }
+          }}
+          className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+            selectMode
+              ? "bg-[var(--accent)] text-white"
+              : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          {selectMode ? "Отмена" : "Связанные"}
+        </button>
+        {selectMode && selectedIds.size >= 2 && (
           <button
-            key={String(tab.key)}
-            onClick={() => setRelatedOnly(tab.key)}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-              relatedOnly === tab.key
-                ? "bg-[var(--accent)] text-white"
-                : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
+            onClick={async () => {
+              const res = await fetch("/api/groups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ operationIds: [...selectedIds] }),
+              });
+              if (res.ok) {
+                toast.success(`Связано ${selectedIds.size} операций`);
+                setSelectMode(false);
+                setSelectedIds(new Set());
+                loadTxs();
+                loadGroups();
+              } else {
+                toast.error("Ошибка связывания");
+              }
+            }}
+            className="px-3 py-1.5 text-xs rounded-lg transition-colors bg-[var(--accent)] text-white"
           >
-            {tab.label}
+            <i className="fa-solid fa-link mr-1" /> Связать ({selectedIds.size})
           </button>
-        ))}
+        )}
+        {selectMode && (
+          <span className="text-xs text-[var(--text-muted)] ml-auto">
+            Выбрано: {selectedIds.size}
+          </span>
+        )}
       </div>
 
       <button
@@ -239,8 +286,44 @@ export default function TransactionsPage() {
             {txs.map((tx) => {
               const icon = getTxIcon(tx.entries, tx.source);
               const color = getTxColor(tx.entries);
+              const isSelected = selectedIds.has(tx.id);
+              const groupColor = tx.groupId ? GROUP_COLORS[tx.groupId % 6] : undefined;
               return (
-                <div key={tx.id} className="tx-item" onClick={() => openEdit(tx)}>
+                <div
+                  key={tx.id}
+                  className="tx-item"
+                  style={{
+                    borderLeft: groupColor ? `3px solid ${groupColor}` : undefined,
+                    paddingLeft: groupColor ? "11px" : undefined,
+                    ...(isSelected ? { background: "rgba(233, 177, 163, 0.06)" } : {}),
+                  }}
+                  onClick={() => {
+                    if (selectMode) {
+                      const next = new Set(selectedIds);
+                      if (next.has(tx.id)) next.delete(tx.id);
+                      else next.add(tx.id);
+                      setSelectedIds(next);
+                    } else {
+                      openEdit(tx);
+                    }
+                  }}
+                >
+                  {selectMode && (
+                    <div className="flex items-center justify-center shrink-0" style={{ width: 32, height: 40 }}
+                      onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          const next = new Set(selectedIds);
+                          if (next.has(tx.id)) next.delete(tx.id);
+                          else next.add(tx.id);
+                          setSelectedIds(next);
+                        }}
+                        style={{ accentColor: "var(--accent)", cursor: "pointer", width: 16, height: 16 }}
+                      />
+                    </div>
+                  )}
                   <div className={`tx-icon ${color}`}><i className={icon} /></div>
                   <div className="tx-info">
                     <div className="tx-name">{tx.description || "Операция"}</div>
@@ -250,7 +333,12 @@ export default function TransactionsPage() {
                       {tx.source.startsWith("scanner") && <span style={{ marginLeft: "6px" }}>· авто</span>}
                       {tx.groupId && groups[tx.groupId] && (
                         <button
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 ml-2 hover:bg-[var(--accent)]/20 transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ml-2 border transition-colors"
+                          style={{
+                            background: `${groupColor}18`,
+                            color: groupColor,
+                            borderColor: `${groupColor}30`,
+                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setExpandedGroupId(expandedGroupId === tx.groupId ? null : (tx.groupId ?? null));
@@ -276,14 +364,16 @@ export default function TransactionsPage() {
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteTx(tx.id); }}
-                    className="btn-icon"
-                    style={{ width: "32px", height: "32px", fontSize: "14px", flexShrink: 0, alignSelf: "center" }}
-                    title="Удалить"
-                  >
-                    <i className="fa-solid fa-trash-can" />
-                  </button>
+                  {!selectMode && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteTx(tx.id); }}
+                      className="btn-icon"
+                      style={{ width: "32px", height: "32px", fontSize: "14px", flexShrink: 0, alignSelf: "center" }}
+                      title="Удалить"
+                    >
+                      <i className="fa-solid fa-trash-can" />
+                    </button>
+                  )}
                 </div>
               );
             })}
