@@ -42,8 +42,8 @@ export async function POST(request: Request) {
       )).all();
     const validIds = validOps.map(o => o.id);
     if (validIds.length > 0) {
-      const placeholders = validIds.map(() => "?").join(",");
-      db.run(sql.raw(`UPDATE operations SET group_id = ${created.id} WHERE id IN (${placeholders})`), ...validIds);
+      db.update(operations).set({ groupId: created.id })
+        .where(inArray(operations.id, validIds)).run();
     }
   }
 
