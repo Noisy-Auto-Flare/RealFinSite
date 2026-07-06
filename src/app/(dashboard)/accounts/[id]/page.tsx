@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS } from "@/lib/utils";
 import { formatAmount } from "@/lib/formatting";
 import type { AccountType } from "@/lib/utils";
+import { ALL_CURRENCIES } from "@/lib/currencies";
 import Select from "@/components/Select";
 import { useToast } from "@/components/Toast";
 
@@ -56,6 +57,13 @@ export default function AccountDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  const [editingBalance, setEditingBalance] = useState<string | null>(null);
+  const [editBalanceAmount, setEditBalanceAmount] = useState("");
+  const [showNewBalance, setShowNewBalance] = useState(false);
+  const [newBalanceCurrency, setNewBalanceCurrency] = useState("");
+  const [newBalanceAmount, setNewBalanceAmount] = useState("");
+  const [balancesSaving, setBalancesSaving] = useState(false);
 
   useEffect(() => {
     fetch(`/api/accounts/${accountId}`)
@@ -138,6 +146,40 @@ export default function AccountDetailPage() {
     router.push("/accounts");
   }
 
+  async function saveBalance(currency: string, amount: number) {
+    if (!account) return;
+    setBalancesSaving(true);
+    const res = await fetch(`/api/accounts/${accountId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ balances: [{ currency, amount }] }),
+    });
+    if (!res.ok) { toast.error("Ошибка при сохранении баланса"); setBalancesSaving(false); return; }
+    setAccount({
+      ...account,
+      balances: account.balances.map((b) =>
+        b.currency === currency ? { ...b, amount } : b
+      ),
+    });
+    setBalancesSaving(false);
+    toast.success("Баланс сохранён");
+  }
+
+  async function addBalance() {
+    if (!account || !newBalanceCurrency) return;
+    const amount = parseFloat(newBalanceAmount.replace(",", ".")) || 0;
+    await saveBalance(newBalanceCurrency, amount);
+    if (!account.balances.find((b) => b.currency === newBalanceCurrency)) {
+      setAccount({
+        ...account,
+        balances: [...account.balances, { currency: newBalanceCurrency, amount }],
+      });
+    }
+    setShowNewBalance(false);
+    setNewBalanceCurrency("");
+    setNewBalanceAmount("");
+  }
+
   if (loading) return <p className="text-[var(--text-muted)]">Загрузка...</p>;
   if (!account) return <p className="text-red-400">Счёт не найден</p>;
 
@@ -191,11 +233,85 @@ export default function AccountDetailPage() {
 
         <div className="space-y-2">
           {account.balances.map((b) => (
-            <div key={b.currency} className="flex justify-between text-sm gap-2">
+            <div key={b.currency} className="flex items-center justify-between text-sm gap-2 group">
               <span className="text-[var(--text-secondary)] truncate min-w-0">{b.currency}</span>
-              <span className="font-mono whitespace-nowrap shrink-0">{formatAmount(b.amount, b.currency)}</span>
+              {editingBalance === b.currency ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={editBalanceAmount}
+                    onChange={(e) => setEditBalanceAmount(e.target.value.replace(/[^0-9.,\-]/g, ""))}
+                    className="w-24 text-right text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveBalance(b.currency, parseFloat(editBalanceAmount.replace(",", ".")) || 0);
+                      if (e.key === "Escape") setEditingBalance(null);
+                    }}
+                  />
+                  <button
+                    onClick={() => saveBalance(b.currency, parseFloat(editBalanceAmount.replace(",", ".")) || 0)}
+                    disabled={balancesSaving}
+                    className="text-xs text-[var(--accent)] hover:text-[var(--accent)]/80"
+                  >
+                    <i className="fa-solid fa-check" />
+                  </button>
+                  <button
+                    onClick={() => setEditingBalance(null)}
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  >
+                    <i className="fa-solid fa-xmark" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="font-mono whitespace-nowrap">{formatAmount(b.amount, b.currency)}</span>
+                  <button
+                    onClick={() => { setEditingBalance(b.currency); setEditBalanceAmount(String(b.amount)); }}
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Редактировать баланс"
+                  >
+                    <i className="fa-solid fa-pencil text-xs" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
+        </div>
+
+        <div className="mt-3 border-t border-[var(--border)] pt-3">
+          {showNewBalance ? (
+            <div className="flex items-center gap-2">
+              <Select value={newBalanceCurrency} onChange={(e) => setNewBalanceCurrency(e.target.value)} className="flex-1">
+                <option value="">Выберите валюту</option>
+                {ALL_CURRENCIES.filter((c) => !account.balances.find((b) => b.currency === c)).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Select>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={newBalanceAmount}
+                onChange={(e) => setNewBalanceAmount(e.target.value.replace(/[^0-9.,\-]/g, ""))}
+                placeholder="Сумма"
+                className="w-24 text-sm"
+                onKeyDown={(e) => { if (e.key === "Enter") addBalance(); }}
+              />
+              <button onClick={addBalance} disabled={!newBalanceCurrency || balancesSaving} className="btn btn-primary text-sm px-2">
+                <i className="fa-solid fa-plus" />
+              </button>
+              <button onClick={() => { setShowNewBalance(false); setNewBalanceCurrency(""); setNewBalanceAmount(""); }} className="btn btn-secondary text-sm px-2">
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowNewBalance(true)}
+              className="text-sm text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors"
+            >
+              + Добавить баланс
+            </button>
+          )}
         </div>
 
         {account.addresses.length > 0 && (

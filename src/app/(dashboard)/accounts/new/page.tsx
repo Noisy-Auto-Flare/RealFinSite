@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/utils";
 import type { AccountType } from "@/lib/utils";
+import { ALL_CURRENCIES } from "@/lib/currencies";
 import Select from "@/components/Select";
 
 const ACCOUNT_TYPES: AccountType[] = [
@@ -43,12 +44,13 @@ export default function NewAccountPage() {
     setLoading(true);
     setError("");
 
+    const filteredBalances = initialBalances.filter((b) => b.currency);
     const body: Record<string, unknown> = {
       name,
       type,
       currency: (type === "cex_exchange" || type === "crypto_wallet") ? undefined : currency,
       addresses: addresses.filter((a) => a.network && a.address),
-      initialBalances: initialBalances.length > 0 ? initialBalances : undefined,
+      initialBalances: filteredBalances.length > 0 ? filteredBalances : undefined,
     };
 
     if (type === "cex_exchange" && connectionType === "auto") {
@@ -123,13 +125,9 @@ export default function NewAccountPage() {
             <div>
               <label className="block text-sm mb-1">Основная валюта</label>
               <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option value="RUB">RUB</option>
-                <option value="USD">USD</option>
-                <option value="USDT">USDT</option>
-                <option value="CNY">CNY</option>
-                <option value="SOL">SOL</option>
-                <option value="BNB">BNB</option>
-                <option value="TON">TON</option>
+                {ALL_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
               </Select>
             </div>
           )}
@@ -251,9 +249,10 @@ export default function NewAccountPage() {
             </>
           )}
 
-          {!isCrypto && !isExchange && (
+          {!isExchange && (
             <>
               <h2 className="font-medium">Начальный баланс (необязательно)</h2>
+              <p className="text-sm text-[var(--text-muted)]">Можно указать позже на странице счёта</p>
 
               {initialBalances.map((bal, idx) => (
                 <div key={idx} className="flex flex-col sm:flex-row gap-2">
@@ -266,18 +265,18 @@ export default function NewAccountPage() {
                     }}
                     className="sm:w-auto"
                   >
-                    <option value="RUB">RUB</option>
-                    <option value="USD">USD</option>
-                    <option value="USDT">USDT</option>
-                    <option value="CNY">CNY</option>
-                    <option value="SOL">SOL</option>
+                    {ALL_CURRENCIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </Select>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={bal.amount || ""}
                     onChange={(e) => {
                       const copy = [...initialBalances];
-                      copy[idx].amount = parseFloat(e.target.value) || 0;
+                      const raw = e.target.value.replace(/[^0-9.,\-]/g, "");
+                      copy[idx].amount = parseFloat(raw.replace(",", ".")) || 0;
                       setInitialBalances(copy);
                     }}
                     placeholder="Сумма"
@@ -293,7 +292,7 @@ export default function NewAccountPage() {
               ))}
 
               <button
-                onClick={() => setInitialBalances([...initialBalances, { currency, amount: 0 }])}
+                onClick={() => setInitialBalances([...initialBalances, { currency: "", amount: 0 }])}
                 className="btn btn-secondary w-full text-sm"
               >
                 + Добавить баланс

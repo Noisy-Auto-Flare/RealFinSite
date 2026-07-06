@@ -4,6 +4,7 @@ import { useEffect, useState, memo } from "react";
 import Select from "@/components/Select";
 import { useToast } from "@/components/Toast";
 import { ENTRY_TYPES, ENTRY_TYPE_HINTS } from "@/lib/operation-types";
+import { ALL_CURRENCIES } from "@/lib/currencies";
 
 interface Props {
   onClose: () => void;
@@ -23,7 +24,6 @@ interface Entry {
   type: "principal" | "fee" | "discount" | "interest" | "coupon";
 }
 
-const CURRENCIES = ["RUB", "USD", "USDT", "CNY", "SOL", "BNB", "TON"];
 const STEPS = ["Основное", "Записи", "Проверка"];
 
 function StepIndicator({ steps, current }: { steps: string[]; current: number }) {
@@ -160,7 +160,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
       entries: entries.map((e) => ({
         accountId: Number(e.accountId),
         currency: e.currency,
-        amount: parseFloat(e.amount),
+        amount: parseFloat(e.amount.replace(",", ".")),
         type: e.type,
       })),
     };
@@ -579,7 +579,7 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                             value={entry.currency}
                             onChange={(e) => updateEntry(index, "currency", e.target.value)}
                           >
-                            {CURRENCIES.map((c) => (
+                            {ALL_CURRENCIES.map((c) => (
                               <option key={c} value={c}>{c}</option>
                             ))}
                           </Select>
@@ -588,11 +588,11 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                         <div>
                           <label className="text-xs text-[var(--text-muted)] block mb-1">Сумма</label>
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={entry.amount}
-                            onChange={(e) => updateEntry(index, "amount", e.target.value)}
+                            onChange={(e) => updateEntry(index, "amount", e.target.value.replace(/[^0-9.,\-]/g, ""))}
                             placeholder="0.00"
-                            step="any"
                           />
                         </div>
 

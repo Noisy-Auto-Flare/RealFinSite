@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { logAction } from "@/lib/action-log";
 import { auth } from "@/auth";
+import { recalculateAllBalances } from "@/lib/balances";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -84,8 +85,7 @@ export async function POST(request: Request) {
 
   if (initialBalances && Array.isArray(initialBalances)) {
     for (const bal of initialBalances) {
-      const amount = parseFloat(bal.amount) || 0;
-      if (amount === 0) continue;
+      const amount = parseFloat(String(bal.amount).replace(",", ".")) || 0;
       const op = db.insert(operations).values({
         userId,
         description: `Initial balance (${bal.currency})`,
@@ -102,7 +102,8 @@ export async function POST(request: Request) {
         isVerified: 1,
       }).run();
     }
-  } else if (!multiCurrency) {
+    recalculateAllBalances();
+  } else {
     db.insert(balances).values({
       accountId: account.id,
       currency: defaultCurrency,

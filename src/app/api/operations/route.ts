@@ -25,6 +25,9 @@ export async function POST(request: Request) {
     if (!e.accountId || !e.currency || e.amount === undefined) {
       return NextResponse.json({ error: "Each entry needs accountId, currency, amount" }, { status: 400 });
     }
+    if (typeof e.amount === "string") {
+      e.amount = parseFloat(e.amount.replace(",", "."));
+    }
     const account = db.select().from(accounts).where(
       and(eq(accounts.id, e.accountId), eq(accounts.userId, userId))
     ).get();
