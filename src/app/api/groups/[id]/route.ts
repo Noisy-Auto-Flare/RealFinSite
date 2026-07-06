@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { operationGroups, operations, operationEntries } from "@/db/schema";
+import { operationGroups, operations, operationEntries, accounts } from "@/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/auth";
 
@@ -24,7 +24,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const opIds = ops.map((o) => o.id);
   const allEntries = opIds.length > 0
-    ? db.select().from(operationEntries)
+    ? db.select({
+        id: operationEntries.id,
+        operationId: operationEntries.operationId,
+        accountId: operationEntries.accountId,
+        currency: operationEntries.currency,
+        amount: operationEntries.amount,
+        type: operationEntries.type,
+        isVerified: operationEntries.isVerified,
+        accountName: accounts.name,
+      }).from(operationEntries)
+        .innerJoin(accounts, eq(accounts.id, operationEntries.accountId))
         .where(inArray(operationEntries.operationId, opIds)).all()
     : [];
 

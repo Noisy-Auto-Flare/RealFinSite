@@ -9,7 +9,10 @@ interface OperationSummary {
   date: string;
   source: string;
   status: string;
-  entries: { currency: string; amount: number; type: string }[];
+  fromAddress?: string | null;
+  toAddress?: string | null;
+  blockTimestamp?: number | null;
+  entries: { currency: string; amount: number; type: string; accountName?: string }[];
 }
 
 interface TransactionRowProps {
@@ -38,6 +41,13 @@ export default memo(function TransactionRow({ tx, onEdit, onDelete }: Transactio
             {tx.source.startsWith("scanner") && <span> · авто</span>}
             {tx.source === "api_bybit" && <span> · bybit</span>}
           </div>
+          {(tx.fromAddress || tx.toAddress) && (
+            <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[250px]">
+              {tx.fromAddress && <span title={tx.fromAddress}>{tx.fromAddress.slice(0, 6)}..</span>}
+              {tx.fromAddress && tx.toAddress && <span className="mx-0.5">→</span>}
+              {tx.toAddress && <span title={tx.toAddress}>..{tx.toAddress.slice(-4)}</span>}
+            </div>
+          )}
         </div>
       </div>
 

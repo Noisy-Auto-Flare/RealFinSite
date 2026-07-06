@@ -99,7 +99,10 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
   const [confirmingFees, setConfirmingFees] = useState(false);
   const [allTags, setAllTags] = useState<{ id: number; name: string; color: string | null }[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#6366f1");
 
+  const [showExtra, setShowExtra] = useState(false);
   const [groups, setGroups] = useState<{ id: number; firstOpDescription: string | null; opCount: number }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [createNewGroup, setCreateNewGroup] = useState(false);
@@ -395,79 +398,133 @@ export default memo(function NewTransactionModal({ onClose }: Props) {
                         {tag.name}
                       </button>
                     ))}
+                    {/* Inline tag creation */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={e => setNewTagName(e.target.value)}
+                        placeholder="+ тег"
+                        className="w-20 px-2 py-1 rounded-full text-xs border border-[var(--border)] bg-transparent outline-none focus:border-[var(--accent)]"
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter" && newTagName.trim()) {
+                            e.preventDefault();
+                            await fetch("/api/tags", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ name: newTagName.trim(), color: newTagColor }),
+                            });
+                            setNewTagName("");
+                            fetch("/api/tags").then(r => r.json()).then(setAllTags).catch(() => {});
+                          }
+                        }}
+                      />
+                      <input
+                        type="color"
+                        value={newTagColor}
+                        onChange={e => setNewTagColor(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!newTagName.trim()) return;
+                          await fetch("/api/tags", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ name: newTagName.trim(), color: newTagColor }),
+                          });
+                          setNewTagName("");
+                          fetch("/api/tags").then(r => r.json()).then(setAllTags).catch(() => {});
+                        }}
+                        className="text-xs text-[var(--accent)] hover:text-[var(--accent)]/80"
+                      >
+                        <i className="fa-solid fa-plus" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Группа</label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="form-input flex-1"
-                      value={selectedGroupId ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "__new__") {
-                          setCreateNewGroup(true);
-                          setSelectedGroupId(null);
-                        } else {
-                          setSelectedGroupId(val ? Number(val) : null);
-                          setCreateNewGroup(false);
-                        }
-                      }}
-                    >
-                      <option value="">— Без группы —</option>
-                      {groups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.firstOpDescription || `Группа #${g.id}`} ({g.opCount} оп.)
-                        </option>
-                      ))}
-                      <option value="__new__">+ Новая группа</option>
-                    </select>
-                  </div>
-                </div>
+                {/* Collapsible "Доп. опции" */}
+                <button
+                  type="button"
+                  onClick={() => setShowExtra(!showExtra)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors"
+                >
+                  <span><i className="fa-solid fa-gear mr-2" />Доп. опции</span>
+                  <i className={`fa-solid fa-chevron-${showExtra ? "up" : "down"} transition-transform`} />
+                </button>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    <input type="checkbox" checked={isLoanGiven} onChange={(e) => setIsLoanGiven(e.target.checked)} className="mr-2" />
-                    Операция с долгом
-                  </label>
-                  {isLoanGiven && (
-                    <div className="mt-2 space-y-2 pl-4 border-l-2 border-[var(--accent)]/30">
-                      {selectedDebtId === null && (
-                        <>
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Имя человека"
-                            value={loanPersonName}
-                            onChange={(e) => setLoanPersonName(e.target.value)}
-                          />
-                          <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Заметка (необязательно)"
-                            value={loanDescription}
-                            onChange={(e) => setLoanDescription(e.target.value)}
-                          />
-                        </>
-                      )}
-                      {debts.filter(d => d.status === "active").length > 0 && (
-                        <select
-                          className="form-input"
-                          value={selectedDebtId ?? ""}
-                          onChange={(e) => setSelectedDebtId(e.target.value ? Number(e.target.value) : null)}
-                        >
-                          <option value="">— Создать новый долг —</option>
-                          {debts.filter(d => d.status === "active").map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.personName} — {d.amount} {d.currency}
-                            </option>
-                          ))}
-                        </select>
+                {showExtra && (
+                  <div className="space-y-4 animate-slide-up">
+                    <div className="form-group">
+                      <label className="form-label">Группа</label>
+                      <Select
+                        value={selectedGroupId ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__new__") {
+                            setCreateNewGroup(true);
+                            setSelectedGroupId(null);
+                          } else {
+                            setSelectedGroupId(val ? Number(val) : null);
+                            setCreateNewGroup(false);
+                          }
+                        }}
+                      >
+                        <option value="">— Без группы —</option>
+                        {groups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.firstOpDescription || `Группа #${g.id}`} ({g.opCount} оп.)
+                          </option>
+                        ))}
+                        <option value="__new__">+ Новая группа</option>
+                      </Select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        <input type="checkbox" checked={isLoanGiven} onChange={(e) => setIsLoanGiven(e.target.checked)} className="mr-2" />
+                        Операция с долгом
+                      </label>
+                      {isLoanGiven && (
+                        <div className="mt-2 space-y-2 pl-4 border-l-2 border-[var(--accent)]/30">
+                          {selectedDebtId === null && (
+                            <>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Имя человека"
+                                value={loanPersonName}
+                                onChange={(e) => setLoanPersonName(e.target.value)}
+                              />
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Заметка (необязательно)"
+                                value={loanDescription}
+                                onChange={(e) => setLoanDescription(e.target.value)}
+                              />
+                            </>
+                          )}
+                          {debts.filter(d => d.status === "active").length > 0 && (
+                            <Select
+                              value={selectedDebtId ?? ""}
+                              onChange={(e) => setSelectedDebtId(e.target.value ? Number(e.target.value) : null)}
+                            >
+                              <option value="">— Создать новый долг —</option>
+                              {debts.filter(d => d.status === "active").map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.personName} — {d.amount} {d.currency}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </>
             )}
 

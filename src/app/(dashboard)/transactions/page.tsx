@@ -15,7 +15,10 @@ interface OperationSummary {
   status: string;
   groupId?: number;
   tags?: string[];
-  entries: { currency: string; amount: number; type: string }[];
+  fromAddress?: string | null;
+  toAddress?: string | null;
+  blockTimestamp?: number | null;
+  entries: { currency: string; amount: number; type: string; accountName?: string }[];
 }
 
 function getTxIcon(entries: { amount: number }[], source: string): string {
@@ -46,6 +49,7 @@ export default function TransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showNewTx, setShowNewTx] = useState(false);
+  const [relatedOnly, setRelatedOnly] = useState(false);
   const [groups, setGroups] = useState<Record<number, { firstOpDescription: string | null; opCount: number }>>({});
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [groupOperations, setGroupOperations] = useState<OperationSummary[]>([]);
@@ -61,7 +65,7 @@ export default function TransactionsPage() {
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
 
-  useEffect(() => { setPage(0); }, [filterStatus, searchQuery]);
+  useEffect(() => { setPage(0); }, [filterStatus, searchQuery, relatedOnly]);
 
   useEffect(() => {
     fetch("/api/groups").then(r => r.json()).then((list) => {
@@ -88,6 +92,7 @@ export default function TransactionsPage() {
     params.set("page", String(page + 1));
     if (filterStatus) params.set("status", filterStatus);
     if (searchQuery) params.set("search", searchQuery);
+    if (relatedOnly) params.set("related", "true");
 
     fetch(`/api/operations?${params.toString()}`)
       .then(r => r.json().catch(() => ({ operations: [], total: 0 })))
@@ -167,6 +172,25 @@ export default function TransactionsPage() {
         </div>
       </header>
 
+      <div className="flex gap-1 mb-4">
+        {[
+          { key: false, label: "Все" },
+          { key: true, label: "Связанные" },
+        ].map(tab => (
+          <button
+            key={String(tab.key)}
+            onClick={() => setRelatedOnly(tab.key)}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+              relatedOnly === tab.key
+                ? "bg-[var(--accent)] text-white"
+                : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <button
         onClick={() => setShowFilters(!showFilters)}
         className="btn-primary"
@@ -213,7 +237,6 @@ export default function TransactionsPage() {
         ) : (
           <div className="tx-list">
             {txs.map((tx) => {
-              const totalAmount = tx.entries.reduce((s, e) => s + e.amount, 0);
               const icon = getTxIcon(tx.entries, tx.source);
               const color = getTxColor(tx.entries);
               return (
@@ -224,27 +247,39 @@ export default function TransactionsPage() {
                     <div className="tx-desc">
                       {new Date(tx.date).toLocaleDateString("ru-RU")}
                       {tx.status === "draft" && <span className="badge badge-pending" style={{ marginLeft: "8px" }}>Черновик</span>}
+                      {tx.source.startsWith("scanner") && <span style={{ marginLeft: "6px" }}>· авто</span>}
+                      {tx.groupId && groups[tx.groupId] && (
+                        <button
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 ml-2 hover:bg-[var(--accent)]/20 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedGroupId(expandedGroupId === tx.groupId ? null : (tx.groupId ?? null));
+                          }}
+                        >
+                          <i className="fa-solid fa-layer-group text-[9px]" />
+                          {groups[tx.groupId].opCount}
+                        </button>
+                      )}
                     </div>
-                  </div>
-                  {tx.groupId && groups[tx.groupId] && (
-                    <button
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 mt-1 hover:bg-[var(--accent)]/20 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedGroupId(expandedGroupId === tx.groupId ? null : (tx.groupId ?? null));
-                      }}
-                    >
-                      <i className="fa-solid fa-layer-group text-[9px]" />
-                      Группа ({groups[tx.groupId].opCount})
-                    </button>
-                  )}
-                  <div className={`tx-amount mono ${totalAmount > 0 ? "income" : "expense"}`}>
-                    {totalAmount > 0 ? "+" : ""}{totalAmount.toFixed(2)}
+                    {tx.entries.map((e, i) => (
+                      <div key={i} className="text-[10px] text-[var(--text-muted)] truncate flex items-center gap-1 flex-wrap">
+                        {e.accountName ? (
+                          <span className="truncate max-w-[120px]">{e.accountName}</span>
+                        ) : tx.fromAddress || tx.toAddress ? (
+                          <>
+                            {tx.fromAddress && <span title={tx.fromAddress} className="shrink-0">{tx.fromAddress.slice(0, 4)}..{tx.fromAddress.slice(-4)}</span>}
+                            {tx.fromAddress && tx.toAddress && <span className="shrink-0">→</span>}
+                            {tx.toAddress && <span title={tx.toAddress} className="shrink-0">{tx.toAddress.slice(0, 4)}..{tx.toAddress.slice(-4)}</span>}
+                          </>
+                        ) : null}
+                        <span className="ml-auto shrink-0">{formatAmount(e.amount, e.currency)}</span>
+                      </div>
+                    ))}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); deleteTx(tx.id); }}
                     className="btn-icon"
-                    style={{ width: "32px", height: "32px", fontSize: "14px", flexShrink: 0 }}
+                    style={{ width: "32px", height: "32px", fontSize: "14px", flexShrink: 0, alignSelf: "center" }}
                     title="Удалить"
                   >
                     <i className="fa-solid fa-trash-can" />
@@ -257,33 +292,104 @@ export default function TransactionsPage() {
 
         {expandedGroupId && (
           <div className="col-span-full bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4 mt-2">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-semibold text-[var(--text-primary)]">
-                Группа: {groups[expandedGroupId]?.firstOpDescription || `Группа #${expandedGroupId}`}
+                <i className="fa-solid fa-layer-group mr-2" />
+                {groups[expandedGroupId]?.firstOpDescription || `Группа #${expandedGroupId}`}
+                <span className="ml-2 text-[var(--text-muted)] font-normal">
+                  {groupOperations.length} операций
+                </span>
               </h4>
               <button
                 className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                 onClick={() => setExpandedGroupId(null)}
               >
-                <i className="fa-solid fa-xmark" />
+                <i className="fa-solid fa-xmark text-lg" />
               </button>
             </div>
-            {groupOperations.map((gop: OperationSummary) => (
-              <div key={gop.id} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-                <div className="flex items-center gap-2">
-                  <i className={`fa-solid ${getTxIcon(gop.entries, gop.source)} ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"} text-sm`} />
-                  <div>
-                    <p className="text-sm text-[var(--text-primary)]">{gop.description || "—"}</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{gop.date}</p>
+
+            {/* Summary: from → to with accounts */}
+            {(() => {
+              const fromOps = groupOperations.filter(o => o.entries.some(e => e.amount < 0 && e.type === "principal"));
+              const toOps = groupOperations.filter(o => o.entries.some(e => e.amount > 0 && e.type === "principal"));
+              const feeOps = groupOperations.filter(o => o.entries.some(e => e.type === "fee"));
+              const allCurrencies = [...new Set(groupOperations.flatMap(o => o.entries.map(e => e.currency)))];
+              return (
+                <div className="space-y-3 mb-4 text-sm">
+                  {fromOps.length > 0 && (
+                    <div>
+                      <span className="text-[var(--text-muted)] text-xs font-medium">Откуда</span>
+                      {fromOps.map(o => o.entries.filter(e => e.amount < 0 && e.type === "principal").map((e, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1">
+                          <span className="font-medium">{e.accountName || o.fromAddress?.slice(0, 8) || "—"}</span>
+                          <span className="text-red-400">{formatAmount(Math.abs(e.amount), e.currency)}</span>
+                        </div>
+                      )))}
+                    </div>
+                  )}
+                  {toOps.length > 0 && (
+                    <div>
+                      <span className="text-[var(--text-muted)] text-xs font-medium">Куда</span>
+                      {toOps.map(o => o.entries.filter(e => e.amount > 0 && e.type === "principal").map((e, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1">
+                          <span className="font-medium">{e.accountName || o.toAddress?.slice(0, 8) || "—"}</span>
+                          <span className="text-green-400">{formatAmount(e.amount, e.currency)}</span>
+                        </div>
+                      )))}
+                    </div>
+                  )}
+                  {feeOps.length > 0 && (
+                    <div>
+                      <span className="text-[var(--text-muted)] text-xs font-medium">Комиссия</span>
+                      {feeOps.map(o => o.entries.filter(e => e.type === "fee").map((e, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1">
+                          <span className="font-medium">{e.accountName || "—"}</span>
+                          <span className="text-red-400">{formatAmount(Math.abs(e.amount), e.currency)}</span>
+                        </div>
+                      )))}
+                    </div>
+                  )}
+                  {allCurrencies.length > 1 && (
+                    <div className="text-[var(--text-muted)] text-xs">
+                      <i className="fa-solid fa-arrows-left-right mr-1" />
+                      Конвертация: {allCurrencies.join(" ↔ ")}
+                    </div>
+                  )}
+                  {groupOperations[0]?.blockTimestamp && (
+                    <div className="text-[var(--text-muted)] text-xs">
+                      <i className="fa-regular fa-clock mr-1" />
+                      {new Date(groupOperations[0].blockTimestamp * 1000).toLocaleString("ru-RU")}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div className="border-t border-[var(--border)] pt-3 space-y-2">
+              {groupOperations.map((gop: OperationSummary) => (
+                <div key={gop.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--bg-primary)]/20 transition-colors">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <i className={`fa-solid ${getTxIcon(gop.entries, gop.source)} ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"} text-sm shrink-0`} />
+                    <div className="min-w-0">
+                      <p className="text-sm text-[var(--text-primary)] truncate">{gop.description || "—"}</p>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {gop.entries.map((e, i) => (
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-primary)]/30 text-[var(--text-muted)]">
+                            {e.accountName || ""} {formatAmount(e.amount, e.currency)}
+                            {e.type === "fee" && " (fee)"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    <p className={`text-sm font-semibold ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"}`}>
+                      {formatAmount(gop.entries.filter(e => e.type === "principal").reduce((s: number, e: any) => s + e.amount, 0), gop.entries[0]?.currency || "")}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-sm font-semibold ${getTxColor(gop.entries) === "green" ? "text-green-400" : "text-red-400"}`}>
-                    {formatAmount(gop.entries.reduce((s: number, e: any) => s + e.amount, 0), gop.entries[0]?.currency || "")}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 

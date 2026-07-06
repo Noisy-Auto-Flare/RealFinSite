@@ -20,7 +20,7 @@ interface UserRow { id: number; username: string; role: string; status: string; 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const toast = useToast();
-  const [tab, setTab] = useState<"profile" | "keys" | "users">("profile");
+  const [tab, setTab] = useState<"profile" | "keys" | "users" | "tags">("profile");
 
   // Profile state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -44,6 +44,11 @@ export default function SettingsPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetSaving, setResetSaving] = useState(false);
 
+  // Tags state
+  const [tags, setTags] = useState<{ id: number; name: string; color: string | null }[]>([]);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#6366f1");
+
   const isAdmin = session?.user?.role === "master";
 
   // Load keys and users on mount
@@ -63,6 +68,8 @@ export default function SettingsPage() {
         .then((data: UserRow[]) => { setUsers(data); setUsersLoading(false); })
         .catch(() => setUsersLoading(false));
     }
+
+    loadTags();
   }, [isAdmin]);
 
   // Profile
@@ -139,6 +146,26 @@ export default function SettingsPage() {
     setResetSaving(false);
   }
 
+  function loadTags() {
+    fetch("/api/tags").then(r => r.json()).then(setTags).catch(() => {});
+  }
+
+  async function handleCreateTag(e: React.FormEvent) {
+    e.preventDefault();
+    await fetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newTagName, color: newTagColor }),
+    });
+    setNewTagName("");
+    loadTags();
+  }
+
+  async function handleDeleteTag(id: number) {
+    await fetch(`/api/tags/${id}`, { method: "DELETE" });
+    loadTags();
+  }
+
   return (
     <>
       <header className="page-header">
@@ -161,6 +188,9 @@ export default function SettingsPage() {
               <i className="fa-solid fa-users" style={{ marginRight: "6px" }} />Пользователи
             </button>
           )}
+          <button className={tab === "tags" ? "active" : ""} onClick={() => setTab("tags")}>
+            <i className="fa-solid fa-tags" style={{ marginRight: "6px" }} />Теги
+          </button>
         </div>
       </div>
 
@@ -296,6 +326,58 @@ export default function SettingsPage() {
             )}
           </div>
         </>
+      )}
+
+      {tab === "tags" && (
+        <div className="card p-4 space-y-4">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Управление тегами</h3>
+
+          {/* Create */}
+          <form onSubmit={handleCreateTag} className="flex gap-2">
+            <input
+              className="form-input flex"
+              placeholder="Название тега"
+              value={newTagName}
+              onChange={e => setNewTagName(e.target.value)}
+              required
+            />
+            <input
+              type="color"
+              className="w-10 h-10 rounded-lg border border-[var(--border)] bg-transparent cursor-pointer"
+              value={newTagColor}
+              onChange={e => setNewTagColor(e.target.value)}
+            />
+            <button type="submit" className="btn-primary">
+              <i className="fa-solid fa-plus" />
+            </button>
+          </form>
+
+          {/* List */}
+          <div className="space-y-2">
+            {tags.map(tag => (
+              <div key={tag.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: tag.color || "var(--text-muted)" }}
+                  />
+                  <span className="text-sm text-[var(--text-primary)]">{tag.name}</span>
+                </div>
+                <button
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
+                  onClick={() => handleDeleteTag(tag.id)}
+                >
+                  <i className="fa-solid fa-trash-can" />
+                </button>
+              </div>
+            ))}
+            {tags.length === 0 && (
+              <p className="text-sm text-[var(--text-muted)] text-center py-4">
+                Нет тегов. Создайте первый!
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {resetUserId && (

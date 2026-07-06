@@ -895,6 +895,26 @@ input:focus, textarea:focus {
   .main-content { padding: 24px 24px 100px 24px; }
 }
 
+@media (max-width: 600px) {
+  .tx-item {
+    gap: 8px;
+    padding: 10px 8px;
+  }
+  .tx-item .tx-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+  .tx-item .tx-info .tx-name {
+    font-size: 13px;
+  }
+  .tx-item .tx-info .tx-desc {
+    font-size: 11px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }

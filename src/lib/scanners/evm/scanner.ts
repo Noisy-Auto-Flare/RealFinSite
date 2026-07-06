@@ -144,6 +144,11 @@ export class EvmScanner implements IScanner {
     const normalTxs = await this.fetchExplorer("txlist", address, fromBlock);
     for (const tx of normalTxs) {
       if (tx.value === "0") continue;
+      let fee: { amount: string; decimals: number; currency?: string } | undefined;
+      if (tx.gasUsed && tx.gasPrice) {
+        const feeWei = BigInt(tx.gasUsed) * BigInt(tx.gasPrice);
+        fee = { amount: feeWei.toString(), decimals: this.config.nativeDecimals, currency: this.config.nativeSymbol };
+      }
       events.push({
         txHash: tx.hash,
         fromAddress: tx.from,
@@ -154,12 +159,18 @@ export class EvmScanner implements IScanner {
         timestamp: parseInt(tx.timeStamp, 10),
         blockNumber: parseInt(tx.blockNumber, 10),
         tokenSymbol: this.config.nativeSymbol,
+        fee,
       });
     }
 
     const tokenTxs = await this.fetchExplorer("tokentx", address, fromBlock);
     for (const tx of tokenTxs) {
       const decimals = parseInt(tx.tokenDecimal || String(this.config.nativeDecimals), 10);
+      let fee: { amount: string; decimals: number; currency?: string } | undefined;
+      if (tx.gasUsed && tx.gasPrice) {
+        const feeWei = BigInt(tx.gasUsed) * BigInt(tx.gasPrice);
+        fee = { amount: feeWei.toString(), decimals: this.config.nativeDecimals, currency: this.config.nativeSymbol };
+      }
       events.push({
         txHash: tx.hash,
         fromAddress: tx.from,
@@ -170,6 +181,7 @@ export class EvmScanner implements IScanner {
         timestamp: parseInt(tx.timeStamp, 10),
         blockNumber: parseInt(tx.blockNumber, 10),
         tokenSymbol: tx.tokenSymbol,
+        fee,
       });
     }
 

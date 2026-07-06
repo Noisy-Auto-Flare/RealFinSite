@@ -7,6 +7,7 @@ interface HeliusTx {
   timestamp: number;
   signature: string;
   slot: number;
+  fee?: number;
   nativeTransfers?: {
     fromUserAccount: string;
     toUserAccount: string;
@@ -74,10 +75,12 @@ export class SolanaScanner implements IScanner {
         if (tx.slot <= fromSlot) continue;
         allOld = false;
 
+        const txOutgoingEvents: RawBlockchainEvent[] = [];
+
         if (tx.nativeTransfers) {
           for (const n of tx.nativeTransfers) {
             if (n.amount <= 0) continue;
-            events.push({
+            const evt: RawBlockchainEvent = {
               txHash: tx.signature,
               fromAddress: n.fromUserAccount,
               toAddress: n.toUserAccount,
@@ -87,7 +90,9 @@ export class SolanaScanner implements IScanner {
               timestamp: tx.timestamp,
               blockNumber: tx.slot,
               tokenSymbol: "SOL",
-            });
+            };
+            events.push(evt);
+            if (n.fromUserAccount === address) txOutgoingEvents.push(evt);
           }
         }
 
@@ -96,7 +101,7 @@ export class SolanaScanner implements IScanner {
             if (!t.rawTokenAmount) continue;
             const mint = t.mint;
             const { decimals, symbol } = await getSplMeta(mint);
-            events.push({
+            const evt: RawBlockchainEvent = {
               txHash: tx.signature,
               fromAddress: t.fromUserAccount,
               toAddress: t.toUserAccount,
@@ -106,8 +111,19 @@ export class SolanaScanner implements IScanner {
               timestamp: tx.timestamp,
               blockNumber: tx.slot,
               tokenSymbol: symbol || undefined,
-            });
+            };
+            events.push(evt);
+            if (t.fromUserAccount === address) txOutgoingEvents.push(evt);
           }
+        }
+
+        // Attach fee to first outgoing event of this tx
+        if (tx.fee && tx.fee > 0 && txOutgoingEvents.length > 0) {
+          txOutgoingEvents[0].fee = {
+            amount: String(tx.fee),
+            decimals: 9,
+            currency: "SOL",
+          };
         }
       }
 

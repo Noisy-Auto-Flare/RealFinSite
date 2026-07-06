@@ -51,23 +51,46 @@ export async function runScannerCycle(): Promise<{ eventsFound: number; addresse
       continue;
     }
 
-    console.log(`[scanner]     found ${events.length} new transaction(s)`);
-    eventsFound += events.length;
-
+    // Deduplicate by (txHash, accountId) before counting/processing
+    // Allows same txHash for different accounts (e.g. transfer between own wallets)
+    const newEvents: RawBlockchainEvent[] = [];
     for (const evt of events) {
+      const existingEntry = db.select({ id: operationEntries.id }).from(operationEntries)
+        .innerJoin(operations, eq(operations.id, operationEntries.operationId))
+        .where(and(
+          eq(operations.txHash, evt.txHash),
+          eq(operationEntries.accountId, row.account.id)
+        ))
+        .get();
+      if (!existingEntry) newEvents.push(evt);
+    }
+
+    if (newEvents.length === 0) {
+      console.log(`[scanner]     0 new (${events.length} known — skipped)`);
+      continue;
+    }
+
+    console.log(`[scanner]     found ${newEvents.length} new transaction(s) (${events.length - newEvents.length} known — skipped)`);
+    eventsFound += newEvents.length;
+
+    for (const evt of newEvents) {
       await processEvent(evt, row.addr.address, row.addr.network, row.account.id, row.account.userId);
     }
 
     recalculateAllBalances();
     markDirty();
 
-    const maxBlock = Math.max(...events.map((e) => e.blockNumber), row.addr.lastSyncBlock ?? 0);
-    const newLastSyncBlock = maxBlock + 1;
-    console.log(`[scanner]     maxBlock: ${maxBlock} → newLastSyncBlock: ${newLastSyncBlock} (was: ${row.addr.lastSyncBlock})`);
-    db.update(accountAddresses)
-      .set({ lastSyncBlock: newLastSyncBlock })
-      .where(eq(accountAddresses.id, row.addr.id))
-      .run();
+    const maxBlock = Math.max(...newEvents.map((e) => e.blockNumber || 0));
+    if (maxBlock > (row.addr.lastSyncBlock ?? 0)) {
+      const newLastSyncBlock = maxBlock + 1;
+      console.log(`[scanner]     maxBlock: ${maxBlock} → newLastSyncBlock: ${newLastSyncBlock} (was: ${row.addr.lastSyncBlock})`);
+      db.update(accountAddresses)
+        .set({ lastSyncBlock: newLastSyncBlock })
+        .where(eq(accountAddresses.id, row.addr.id))
+        .run();
+    } else {
+      console.log(`[scanner]     all events within known range (maxBlock: ${maxBlock} ≤ lastSyncBlock: ${row.addr.lastSyncBlock})`);
+    }
   }
 
   return { eventsFound, addressesScanned: allAddresses.length };
@@ -80,11 +103,18 @@ async function processEvent(
   accountId: number,
   userId: number
 ): Promise<void> {
-  const existing = db.select({ id: operations.id, status: operations.status }).from(operations)
-    .where(eq(operations.txHash, evt.txHash)).get();
-  if (existing) {
-    if (existing.status === "draft") {
-      db.update(operations).set({ status: "confirmed" }).where(eq(operations.id, existing.id)).run();
+  // Dedup by (txHash, accountId) — same txHash allowed for different accounts (own-wallet transfers)
+  const existingOp = db.select({ opId: operations.id, status: operations.status }).from(operationEntries)
+    .innerJoin(operations, eq(operations.id, operationEntries.operationId))
+    .where(and(
+      eq(operations.txHash, evt.txHash),
+      eq(operationEntries.accountId, accountId)
+    ))
+    .get();
+  if (existingOp) {
+    if (existingOp.status === "draft") {
+      db.update(operations).set({ status: "confirmed" })
+        .where(eq(operations.id, existingOp.opId)).run();
     }
     return;
   }
@@ -104,8 +134,21 @@ async function processEvent(
 
   if (humanAmount <= 0) return;
 
-  const isIncoming = evt.toAddress.toLowerCase() === ownAddress.toLowerCase();
-  const isOutgoing = evt.fromAddress.toLowerCase() === ownAddress.toLowerCase();
+  const ownAddr = ownAddress.toLowerCase();
+  let isIncoming = evt.toAddress.toLowerCase() === ownAddr;
+  let isOutgoing = evt.fromAddress.toLowerCase() === ownAddr;
+
+  // TON Jetton: from/to are jetton wallet addresses, not user address
+  // jettonWalletAddress is the user's jetton wallet for this token
+  if (!isIncoming && !isOutgoing && evt.jettonWalletAddress) {
+    const jAddr = evt.jettonWalletAddress.toLowerCase();
+    // If user's jetton wallet is the source → outgoing, else incoming
+    if (jAddr === evt.fromAddress.toLowerCase()) {
+      isOutgoing = true;
+    } else {
+      isIncoming = true;
+    }
+  }
 
   if (!isIncoming && !isOutgoing) return;
 
@@ -131,6 +174,21 @@ async function processEvent(
     type: "principal",
     isVerified: 1,
   }).run();
+
+  // Attach network fee as a separate entry (outgoing only — user pays the fee)
+  if (evt.fee && isOutgoing) {
+    const feeAmount = parseFloat(evt.fee.amount) / Math.pow(10, evt.fee.decimals);
+    if (feeAmount > 0) {
+      db.insert(operationEntries).values({
+        operationId: op.id,
+        accountId,
+        currency: evt.fee.currency || currency,
+        amount: -feeAmount,
+        type: "fee",
+        isVerified: 0,
+      }).run();
+    }
+  }
 }
 
 export async function syncAddressBalance(
@@ -196,7 +254,7 @@ export async function syncAddressBalance(
     .where(eq(accountAddresses.id, addressId))
     .get();
 
-  const newBlock = Math.max(current?.lastSyncBlock ?? 0, result.blockNumber);
+  const newBlock = Math.max(current?.lastSyncBlock ?? 0, result.blockNumber || 0);
   db.update(accountAddresses)
     .set({ lastSyncBlock: newBlock })
     .where(eq(accountAddresses.id, addressId))

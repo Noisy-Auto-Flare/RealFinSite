@@ -8,6 +8,8 @@ export interface RawBlockchainEvent {
   timestamp: number;
   blockNumber: number;
   tokenSymbol?: string;
+  jettonWalletAddress?: string; // TON Jetton: the user's jetton wallet for this transfer
+  fee?: { amount: string; decimals: number; currency?: string }; // network fee
 }
 
 export interface NativeBalanceResult {

@@ -27,7 +27,7 @@ interface Trc20TokenMeta {
 
 const TRC20_DECIMALS: Record<string, number> = {};
 const TRC20_SYMBOLS: Record<string, string> = {};
-const TX_BLOCK_CACHE: Record<string, number> = {};
+const TX_CACHE: Record<string, { blockNumber: number; fee: number }> = {};
 
 export class TronScanner implements IScanner {
   network = "tron";
@@ -37,7 +37,7 @@ export class TronScanner implements IScanner {
     const apiKey = process.env.TRONGRID_API_KEY || getNetworkApiKey("tron") || "";
 
     let url = `https://api.trongrid.io/v1/accounts/${address}/transactions/trc20?limit=200`;
-    if (fromBlock > 0) url += `&block_number=${fromBlock}`;
+    if (fromBlock > 0) url += `&min_block_number=${fromBlock + 1}`;
     if (apiKey) url += `&api_key=${apiKey}`;
 
     try {
@@ -49,8 +49,8 @@ export class TronScanner implements IScanner {
 
       for (const tx of data.data) {
         if (tx.type === "Approval") continue;
-        const blockNumber = await getTxBlockNumber(tx.transaction_id);
-        events.push({
+        const info = await getTxInfo(tx.transaction_id);
+        const evt: RawBlockchainEvent = {
           txHash: tx.transaction_id,
           fromAddress: tx.from,
           toAddress: tx.to,
@@ -58,9 +58,13 @@ export class TronScanner implements IScanner {
           tokenContract: tx.token_info.address,
           decimals: tx.token_info.decimals,
           timestamp: Math.floor(tx.block_timestamp / 1000),
-          blockNumber,
+          blockNumber: info.blockNumber,
           tokenSymbol: tx.token_info.symbol,
-        });
+        };
+        if (info.fee && info.fee > 0) {
+          evt.fee = { amount: String(info.fee), decimals: 6, currency: "TRX" };
+        }
+        events.push(evt);
       }
     } catch {}
 
@@ -139,8 +143,8 @@ export class TronScanner implements IScanner {
   }
 }
 
-async function getTxBlockNumber(txId: string): Promise<number> {
-  if (TX_BLOCK_CACHE[txId] !== undefined) return TX_BLOCK_CACHE[txId];
+async function getTxInfo(txId: string): Promise<{ blockNumber: number; fee: number }> {
+  if (TX_CACHE[txId] !== undefined) return TX_CACHE[txId];
 
   try {
     const res = await fetch("https://api.trongrid.io/wallet/gettransactioninfobyid", {
@@ -150,15 +154,15 @@ async function getTxBlockNumber(txId: string): Promise<number> {
       signal: AbortSignal.timeout(10000),
     });
     if (res.ok) {
-      const data: { blockNumber?: number } = await res.json();
-      if (data.blockNumber) {
-        TX_BLOCK_CACHE[txId] = data.blockNumber;
-        return data.blockNumber;
-      }
+      const data: { blockNumber?: number; fee?: number; net_fee?: number; energy_fee?: number } = await res.json();
+      const blockNumber = data.blockNumber ?? 0;
+      const fee = data.fee ?? data.net_fee ?? data.energy_fee ?? 0;
+      TX_CACHE[txId] = { blockNumber, fee };
+      return { blockNumber, fee };
     }
   } catch {}
 
-  return 0;
+  return { blockNumber: 0, fee: 0 };
 }
 
 async function getTrc20Meta(contract: string): Promise<{ decimals: number; symbol: string }> {

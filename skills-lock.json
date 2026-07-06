@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "blockchain-developer": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/blockchain-developer/SKILL.md",
+      "computedHash": "58b38e5956df7dcc73e65646a2794ef9e7d59684fbdd25141cb3f6984a2e7c60"
+    }
+  }
+}

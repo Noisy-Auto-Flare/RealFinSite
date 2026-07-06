@@ -112,6 +112,7 @@ export class TonScanner implements IScanner {
         timestamp: tx.time,
         blockNumber: parseInt(tx.transaction_id.lt, 10),
         tokenSymbol: symbol || undefined,
+        jettonWalletAddress: tx.jetton_wallet_address,
       });
     }
 
@@ -202,7 +203,7 @@ export class TonScanner implements IScanner {
     address: string,
     fromLt: number
   ): Promise<TonTx[]> {
-    const url = `${baseUrl}/getTransactions?address=${address}&limit=100&start_lt=${fromLt || 0}&sort=asc${apiKey ? `&api_key=${apiKey}` : ""}`;
+    const url = `${baseUrl}/getTransactions?address=${address}&limit=100${apiKey ? `&api_key=${apiKey}` : ""}`;
 
     let res: Response;
     try { res = await fetch(url, { signal: AbortSignal.timeout(15000) }); } catch { return []; }
@@ -212,7 +213,7 @@ export class TonScanner implements IScanner {
     try { data = await res.json(); } catch { return []; }
 
     if (!data.ok || !Array.isArray(data.result)) return [];
-    return data.result;
+    return data.result.filter(tx => parseInt(tx.transaction_id.lt, 10) > fromLt);
   }
 
   private async fetchJettonTransfers(
@@ -221,7 +222,7 @@ export class TonScanner implements IScanner {
     address: string,
     fromLt: number
   ): Promise<TonJettonTransfer[]> {
-    const url = `${baseUrl}/getJettonTransfers?address=${address}&limit=100&start_lt=${fromLt || 0}&sort=asc${apiKey ? `&api_key=${apiKey}` : ""}`;
+    const url = `${baseUrl}/getJettonTransfers?address=${address}&limit=100${apiKey ? `&api_key=${apiKey}` : ""}`;
 
     let res: Response;
     try { res = await fetch(url, { signal: AbortSignal.timeout(15000) }); } catch { return []; }
@@ -231,7 +232,7 @@ export class TonScanner implements IScanner {
     try { data = await res.json(); } catch { return []; }
 
     if (!data.ok || !Array.isArray(data.result)) return [];
-    return data.result;
+    return data.result.filter(tx => parseInt(tx.transaction_id.lt, 10) > fromLt);
   }
 }
 

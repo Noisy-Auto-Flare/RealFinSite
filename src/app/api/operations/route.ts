@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     date,
     source: "manual",
     status: status || "draft",
+    blockTimestamp: Math.floor(Date.now() / 1000),
   }).returning().get();
 
   // Detect fee deficits per (account, currency)
@@ -147,12 +148,23 @@ export async function GET(request: Request) {
   const dateTo = searchParams.get("date_to");
   const status = searchParams.get("status");
   const searchQ = searchParams.get("search");
+  const relatedOnly = searchParams.get("related") === "true";
 
   const conditions = [eq(operations.userId, userId)];
   if (dateFrom) conditions.push(gte(operations.date, dateFrom));
   if (dateTo) conditions.push(lte(operations.date, dateTo));
   if (status) conditions.push(eq(operations.status, status));
   if (searchQ) conditions.push(like(operations.description, `%${searchQ}%`));
+  if (relatedOnly) {
+    conditions.push(sql`(
+      ${operations.groupId} IS NOT NULL
+      OR ${operations.txHash} IN (
+        SELECT tx_hash FROM operations
+        WHERE user_id = ${userId} AND tx_hash IS NOT NULL
+        GROUP BY tx_hash HAVING COUNT(*) > 1
+      )
+    )`);
+  }
 
   const offset = (page - 1) * limit;
   const total = db.select({ count: sql<number>`count(*)` }).from(operations)
@@ -160,14 +172,24 @@ export async function GET(request: Request) {
 
   const list = db.select().from(operations)
     .where(and(...conditions))
-    .orderBy(desc(operations.date))
+    .orderBy(desc(operations.date), desc(operations.blockTimestamp), desc(operations.createdAt))
     .limit(limit)
     .offset(offset)
     .all();
 
   const opIds = list.map((o) => o.id);
   const allEntries = opIds.length > 0
-    ? db.select().from(operationEntries)
+    ? db.select({
+        id: operationEntries.id,
+        operationId: operationEntries.operationId,
+        accountId: operationEntries.accountId,
+        currency: operationEntries.currency,
+        amount: operationEntries.amount,
+        type: operationEntries.type,
+        isVerified: operationEntries.isVerified,
+        accountName: accounts.name,
+      }).from(operationEntries)
+        .innerJoin(accounts, eq(accounts.id, operationEntries.accountId))
         .where(inArray(operationEntries.operationId, opIds)).all()
     : [];
   const entriesByOpId: Record<number, typeof allEntries> = {};
