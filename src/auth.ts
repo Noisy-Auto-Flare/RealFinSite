@@ -29,21 +29,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        if (!credentials?.username || !credentials?.password) return null;
+        if (!credentials?.username || !credentials?.password) {
+          console.log("[auth] missing credentials", { hasUsername: !!credentials?.username, hasPassword: !!credentials?.password });
+          return null;
+        }
 
         const user = db.select().from(users).where(
           eq(users.username, credentials.username as string)
         ).get();
 
-        if (!user) return null;
-        if (user.status !== "approved") return null;
+        if (!user) {
+          console.log(`[auth] user not found: "${credentials.username}"`);
+          return null;
+        }
+        if (user.status !== "approved") {
+          console.log(`[auth] user not approved: "${credentials.username}" (status: ${user.status})`);
+          return null;
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.password
         );
 
-        if (!isValid) return null;
+        if (!isValid) {
+          console.log(`[auth] wrong password for: "${credentials.username}"`);
+          return null;
+        }
 
         return {
           id: String(user.id),
