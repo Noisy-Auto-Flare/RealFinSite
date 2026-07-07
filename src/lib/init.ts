@@ -6,22 +6,26 @@ import bcrypt from "bcryptjs";
 const INIT_KEY = "__fintracker_initialized";
 
 function autoSeedMasterUser(sqlite: Database.Database): void {
-  const stmt = sqlite.prepare("SELECT COUNT(*) as count FROM users");
-  const row = stmt.get() as { count: number };
-  if (row.count > 0) return;
-
   const masterUsername = process.env.MASTER_USERNAME || "admin";
   const masterPassword = process.env.MASTER_PASSWORD;
-  if (!masterPassword) {
-    console.log("  ⚠ MASTER_PASSWORD not set, skipping master user creation");
-    return;
-  }
+  if (!masterPassword) return;
+
+  const existing = sqlite.prepare(
+    "SELECT id, password FROM users WHERE username = ? AND role = 'master'"
+  ).get(masterUsername) as { id: number; password: string } | undefined;
 
   const hashed = bcrypt.hashSync(masterPassword, 10);
-  sqlite.prepare(
-    "INSERT INTO users (username, password, role, status) VALUES (?, ?, 'master', 'approved')"
-  ).run(masterUsername, hashed);
-  console.log(`  ✓ master user '${masterUsername}' created`);
+
+  if (existing) {
+    if (bcrypt.compareSync(masterPassword, existing.password)) return;
+    sqlite.prepare("UPDATE users SET password = ? WHERE id = ?").run(hashed, existing.id);
+    console.log(`  ✓ master user '${masterUsername}' password updated`);
+  } else {
+    sqlite.prepare(
+      "INSERT INTO users (username, password, role, status) VALUES (?, ?, 'master', 'approved')"
+    ).run(masterUsername, hashed);
+    console.log(`  ✓ master user '${masterUsername}' created`);
+  }
 }
 
 export function initializeApp(): void {
